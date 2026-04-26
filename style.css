@@ -42,6 +42,33 @@ h1 {
   margin-top: 20px;
   font-size: 1.8rem;
 }
+.shuffle{
+  position: fixed;
+  color: var(--btn-text);
+  bottom: 280px;
+  left: 413px;
+  width: 150px;
+  height: 80px;
+  animation: wow 3s ease-in infinite;
+}
+@keyframes wow {
+  0%{
+    background-color: cyan;
+  }
+  25%{
+    background-color: orange;
+  }
+  50%{
+    background-color: gold;
+  }
+  75%{
+    background-color: lightgreen;
+  }
+  100%{
+    background-color: red;
+  }
+  
+}
 
 .box {
   position: relative;
@@ -66,6 +93,7 @@ input {
   font-size: 1.5rem;
 }
 button {
+  position: relative;
   border-radius: 20px;
   width: 200px;
   height: 100px;
@@ -219,6 +247,7 @@ div .hidden-1{
 #counter {
   position: relative;
   top: 355px;
+  left: -175px;
   font-size: 25px;
   font-weight: bold;
 }
@@ -266,6 +295,10 @@ h2{
     justify-content: center;
     justify-items: center;
     padding: 0 100px;
+  }
+  .FC-tag{
+    position: relative;
+    left: 30px;
   }
 
   h1 {
@@ -329,13 +362,22 @@ h2{
 #prevBtn{
   position: relative;
   top: -3px;
+  left: -90px;
 }
 #nextBtn{
   position: relative;
   top: -3px;
+  right: -90px;
 }
 #counter{
   position: relative;
-  top: 3px;
+  top: 450px;
+  left: -80px;
 }
+.shuffle{
+  position: relative;
+  left: 2px;
+  top: 1px;
+}
+
 }

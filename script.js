@@ -234,3 +234,21 @@ function updateDeckList() {
     select.appendChild(option);
   });
 }
+
+window.shuffleCards = function () {
+  if (quiz.length === 0) return;
+
+  // Fisher-Yates Shuffle Algorithm
+  for (let i = quiz.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [quiz[i], quiz[j]] = [quiz[j], quiz[i]];
+  }
+
+  // reset index after shuffle
+  currentIndex = 0;
+
+  // rerender card
+  renderCard();
+
+  alert("Cards shuffled! 🔀");
+};

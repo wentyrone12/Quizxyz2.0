@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WBANK Quiz Maker</title>
+  <title>WHITE_QUIZXYZ 2.0</title>
+  <link rel="icon" href="logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,12 +16,13 @@
 
         <div id="mother-container">
             <h2 class="FC-tag">Flash Card</h2>
+            <span id="counter">0 / 0</span>
             <div id="cardContainer"></div>
 
             <!-- NAV BUTTONS (EDITABLE NA SA HTML/CSS) -->
             <div class="nav">
                 <button id="prevBtn" onclick="prevCard()">⬅Previous</button>
-                <span id="counter">0 / 0</span>
+                <button class="shuffle" onclick="shuffleCards()">🔀 Shuffle</button>
                 <button id="nextBtn" onclick="nextCard()">Next➡</button>
             </div>
             </div>
