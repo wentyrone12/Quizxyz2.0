@@ -252,3 +252,120 @@ window.shuffleCards = function () {
 
   alert("Cards shuffled! 🔀");
 };
+
+window.toggleSettings = function () {
+  const card = document.getElementById("settingsCard");
+  card.classList.toggle("hidden");
+};
+
+document.addEventListener("click", function (e) {
+  const card = document.getElementById("settingsCard");
+  const btn = document.getElementById("settingsBtn");
+
+  if (!card.contains(e.target) && !btn.contains(e.target)) {
+    card.classList.add("hidden");
+  }
+});
+
+// OPEN PROFILE
+window.openProfile = function () {
+  document.getElementById("settingsCard").classList.add("hidden");
+  document.getElementById("profileCard").classList.remove("hidden");
+
+  // load saved data
+  document.getElementById("username").value = localStorage.getItem("username") || "";
+  document.getElementById("email").value = localStorage.getItem("email") || "";
+  document.getElementById("bio").value = localStorage.getItem("bio") || "";
+};
+
+// SAVE PROFILE
+window.saveProfile = function () {
+  localStorage.setItem("username", document.getElementById("username").value);
+  localStorage.setItem("email", document.getElementById("email").value);
+  localStorage.setItem("bio", document.getElementById("bio").value);
+
+  alert("Profile Saved!");
+};
+
+// OPEN MUSIC
+let isPlaying = false;
+
+window.openMusic = function () {
+  document.getElementById("settingsCard").classList.add("hidden");
+  document.getElementById("musicCard").classList.remove("hidden");
+};
+
+// BACK TO SETTINGS
+window.backToSettings = function () {
+  document.getElementById("profileCard").classList.add("hidden");
+  document.getElementById("musicCard").classList.add("hidden");
+  document.getElementById("settingsCard").classList.remove("hidden");
+};
+
+let playlist = [
+  "music1.mp3",
+  "music2.mp3",
+  "music3.mp3",
+  "music4.mp3",
+  "music5.mp3",
+  "music6.mp3"
+];
+
+let currentSong = 0;
+let audio = document.getElementById("audioPlayer");
+
+// LOAD SONG
+function loadSong(index) {
+  audio.src = playlist[index];
+
+  let name = playlist[index].split("/").pop();
+  document.getElementById("musicTitle").innerText = name;
+}
+
+// OPEN MUSIC
+window.openMusic = function () {
+  document.getElementById("settingsCard").classList.add("hidden");
+  document.getElementById("musicCard").classList.remove("hidden");
+
+  if (!audio.src) {
+    loadSong(currentSong);
+  }
+};
+
+// PLAY / PAUSE
+window.togglePlay = function () {
+  if (audio.paused) {
+    audio.play();
+  } else {
+    audio.pause();
+  }
+};
+
+// NEXT
+window.nextMusic = function () {
+  currentSong++;
+  if (currentSong >= playlist.length) currentSong = 0;
+
+  loadSong(currentSong);
+  audio.play();
+};
+
+// PREVIOUS
+window.prevMusic = function () {
+  currentSong--;
+  if (currentSong < 0) currentSong = playlist.length - 1;
+
+  loadSong(currentSong);
+  audio.play();
+};
+
+// AUTO NEXT PAG TAPOS
+audio.addEventListener("ended", function () {
+  nextMusic();
+});
+
+window.openAbout = function () {
+  document.getElementById("settingsCard").classList.add("hidden");
+  document.getElementById("aboutadminCard").classList.remove("hidden");
+}
+

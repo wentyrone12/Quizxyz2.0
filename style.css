@@ -19,14 +19,17 @@ body {
 
   --btn-texts: black;
   --btn-btn: gold;
-  --btn-borders: wheat;
+  --btn-borders: rgb(255, 255, 255);
   --btn-bgs: cyan;
+
+  --case-1: rgb(114, 114, 114);
+  --case-1-text: rgb(0, 0, 0);
 }
 
 body.light-mode {
   --bg: #f9f9f9;
   --text: #007700;
-  --card-bg: wheat;
+  --card-bg: rgb(255, 255, 255);
   --card-border: #007700;
   --btn-bg: #007700;
   --btn-text: #fff;
@@ -35,6 +38,9 @@ body.light-mode {
   --btn-texts: gold;
   --btn-borders: black;
   --btn-bgs: red;
+
+  --case-1: black;
+   --case-1-text: rgb(213, 255, 4);
 }
 
 h1 {
@@ -45,10 +51,10 @@ h1 {
 .shuffle{
   position: fixed;
   color: var(--btn-text);
-  bottom: 280px;
-  left: 413px;
-  width: 150px;
-  height: 80px;
+  bottom: 200px;
+  left: 370px;
+  width: 230px;
+  height: 100px;
   animation: wow 3s ease-in infinite;
 }
 @keyframes wow {
@@ -130,7 +136,8 @@ div .hidden-1{
 .front, .back {
   color: var(--btn-borders);
   position: absolute;
-  width: 100%;
+  left: -70px;
+  width: 120%;
   height: 100%;
   border: 2px solid var(--btn-bg);
   display: flex;
@@ -140,7 +147,7 @@ div .hidden-1{
   border-radius: 25px;
   padding: 10px;
   box-sizing: border-box;
-  font-size: 28px;
+  font-size: 42px;
   overflow-wrap: break-word;
   word-wrap: break-word;
   text-align: center;
@@ -185,6 +192,8 @@ div .hidden-1{
   justify-content: center;
   color: var(--card-border);
   float: left;
+  position: absolute;
+  left: 80px;
   font-size: 24px;
   border: 2px solid var(--card-border);
   padding: 10px;
@@ -230,8 +239,8 @@ div .hidden-1{
   position: relative;
   top: 355px;
   margin: 20PX;
-  width: 160px;
-  height: 90px;
+  width: 230px;
+  height: 150px;
   font-size: 16px;
   border-radius: 19px;
 }
@@ -239,16 +248,16 @@ div .hidden-1{
   position: relative;
   top: 355px;
   margin: 20PX;
-  width: 160px;
-  height: 90px;
+  width: 230px;
+  height: 150px;
   font-size: 16px;
   border-radius: 19px;
 }
 #counter {
   position: relative;
   top: 355px;
-  left: -175px;
-  font-size: 25px;
+  left: -135px;
+  font-size: 40px;
   font-weight: bold;
 }
 h2{
@@ -259,7 +268,7 @@ h2{
 .FC-tag{
   display: inline-block;
   position: relative;
-  left: -30px;
+  right:-40px;
 }
 .card {
   position: relative;
@@ -289,6 +298,125 @@ h2{
   bottom: -560px;
   color: gray;
 }
+
+/* SETTINGS BUTTON */
+.settings-btn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  width: 75px;
+  height: 75px;
+  border-radius: 20px;
+  font-size: 26px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  cursor: pointer;
+  z-index: 1000;
+  transition: 0.3s;
+}
+
+.settings-btn:hover {
+  transform: rotate(90deg) scale(1.1);
+}
+
+/* SETTINGS CARD */
+.settings-card {
+  text-align: center;
+  position: fixed;
+  top: 330px;
+  right: 127px;
+  width: 700px;
+  height: 1000px;
+  color: var(--case-1-text);
+  background: var(--case-1);
+  border: 2px solid var(--card-border);
+  border-radius: 40px;
+  padding: 15px;
+  box-shadow: 0 0 15px var(--btn-bgs);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+}
+
+/* ITEMS */
+.setting-item {
+  text-align: center;
+  position: relative;
+  top: 190px;
+  font-size: 50px;
+  padding: 10px;
+  margin-top: 40px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
+.setting-item:hover {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+}
+
+.music-controls {
+  position: relative;
+  top: 250px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 30px 0;
+}
+
+.music-controls button {
+  width: 190px;
+  height: 80px;
+  font-size: 20px;
+}
+.music-player{
+  font-size: 70px;
+}
+#musicTitle{
+  font-size: 40px;
+}
+
+.btn-musicback{
+  position: relative;
+  top: 400px;
+}
+
+#profileCard input {
+  width: 80%;
+  height: 90px;
+  position: relative;
+  top: 180px;
+  margin: 10px auto;
+  font-size: 16px;
+}
+.setting-profile{
+  font-size: 40px;
+}
+.setting-convo{
+  font-size: 48px;
+}
+.btn-saveback{
+  position: relative;
+  bottom: -10px;
+}
+.btn-saveback-1{
+  position: relative;
+  bottom: -400px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
 @media (min-width: 1024px) {
   body {
     text-align: center;

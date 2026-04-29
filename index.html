@@ -4,9 +4,58 @@
   <meta charset="UTF-8">
   <title>WHITE_QUIZXYZ 2.0</title>
   <link rel="icon" href="logo.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styleindex.css">
 </head>
 <body>
+
+  <!-- SETTINGS BUTTON -->
+<button id="settingsBtn" class="settings-btn" onclick="toggleSettings()">⚙️</button>
+
+<div id="settingsCard" class="settings-card hidden">
+
+  <div class="setting-item" onclick="openProfile()">👤 Profile</div>
+  <div class="setting-item">💬Conversation<br>(Coming soon)</div>
+  <div class="setting-item" onclick="openAbout()">ℹ️ About</div>
+</div>
+
+<!-- PROFILE CARD -->
+<div id="profileCard" class="settings-card hidden">
+  <h3 class="setting-profile">👤 Profile</h3>
+
+  <input type="text" id="username" placeholder="Username">
+  <input type="email" id="email" placeholder="Email">
+  <input type="text" id="bio" placeholder="Bio">
+
+  <button class="btn-saveback-1" onclick="saveProfile()">Save</button>
+  <button class="btn-saveback-1" onclick="backToSettings()">⬅ Back</button>
+</div>
+
+<!-- MUSIC CARD -->
+<div id="aboutCard" class="settings-card hidden">
+  <h3>🎵 Music Player</h3>
+  <audio id="audioPlayer"></audio>
+
+  <p id="musicTitle">No song</p>
+
+  <div class="music-controls">
+    <button onclick="prevMusic()">⏮</button>
+    <button onclick="togglePlay()">▶ / ⏸</button>
+    <button onclick="nextMusic()">⏭</button>
+  </div>
+
+ <button class="btn-saveback" onclick="backToSettings()">⬅ Back</button>
+</div>
+
+
+<div id="ConversationCard" class="settings-card hidden">
+  <h3 class="setting-convo">Coming soon...</h3>
+  <button class="btn-saveback" onclick="backToSettings()">⬅ Back</button>
+</div>
+
+<div id="aboutadminCard" class="settings-card hidden">
+  <h3 class="setting-convo">WHITE_QUIZXYZ 2.0 is a smart flashcard and quiz system<br>where “WHITE” stands for Wendell Highly Intelligent Thinking Excellence,<br> representing a mindset of discipline, growth, and continuous learning designed to help students improve memory, focus, and academic performance through interactive and simple digital study tools.</h3>
+  <a href="index.html"><button class="btn-saveback">⬅ Back</button></a>
+</div>
 
 
 <h1>WHITE_QUIZXYZ 2.0</h1>
