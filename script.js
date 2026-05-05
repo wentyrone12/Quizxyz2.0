@@ -15,8 +15,10 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let quiz = [];
+let currentIndex = 0;
+let audio;
 
-// LOAD FROM localStorage
+// LOAD LOCAL DATA
 if (localStorage.getItem("quizData")) {
   quiz = JSON.parse(localStorage.getItem("quizData"));
 }
@@ -35,36 +37,60 @@ window.toggleTheme = () => {
 window.addQuestion = function () {
   let q = document.getElementById("question").value.trim();
   let a = document.getElementById("answer").value.trim();
+
   if (!q || !a) return alert("Fill all fields!");
+
   quiz.push({ question: q, answer: a });
   localStorage.setItem("quizData", JSON.stringify(quiz));
+
   document.getElementById("question").value = "";
   document.getElementById("answer").value = "";
+
   showReviewer();
 };
 
 // DELETE
 window.deleteQuestion = function(index) {
   if (!confirm("Delete this question?")) return;
+
   quiz.splice(index, 1);
   localStorage.setItem("quizData", JSON.stringify(quiz));
   showReviewer();
 };
 
-// SAVE ONLINE
+// 🔥 SHARE (FIXED)
 window.saveQuizOnline = async function () {
   if (quiz.length === 0) return alert("No questions!");
+
   try {
     let docRef = await addDoc(collection(db, "quizzes"), { data: quiz });
+
     let link = window.location.origin + window.location.pathname + "?quiz=" + docRef.id;
-    prompt("Copy your quiz link:", link);
-  } catch(e) { console.error(e); alert("Error saving quiz"); }
+
+    navigator.clipboard.writeText(link); // auto copy
+    alert("✅ Link copied!🔗");
+
+  } catch(e) {
+    console.error(e);
+    alert("Error saving quiz");
+  }
 };
 
-// LOAD SHARED QUIZ
+// LOAD PAGE (FIXED - ONE ONLY)
 window.onload = async function () {
+
+  // AUDIO SAFE INIT
+  audio = document.getElementById("audioPlayer");
+  if (audio) {
+    audio.addEventListener("ended", function () {
+      nextMusic();
+    });
+  }
+
+  // LOAD SHARED QUIZ
   const params = new URLSearchParams(window.location.search);
   const id = params.get("quiz");
+
   if (id) {
     try {
       let snap = await getDoc(doc(db, "quizzes", id));
@@ -73,27 +99,34 @@ window.onload = async function () {
         localStorage.setItem("quizData", JSON.stringify(quiz));
         alert("Shared Quiz Loaded!");
       }
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      console.error(e);
+    }
   }
+
   if (quiz.length > 0) showReviewer();
 };
-let currentIndex = 0;
 
+// SHOW REVIEWER (SAFE)
 window.showReviewer = function () {
-  document.getElementById("reviewer").classList.remove("hidden");
+  const reviewer = document.getElementById("reviewer");
+  if (reviewer) reviewer.classList.remove("hidden");
 
-  currentIndex = 0; // reset kapag open
-
+  currentIndex = 0;
   renderCard();
 };
 
 function renderCard() {
   const container = document.getElementById("cardContainer");
+  const counter = document.getElementById("counter");
+
+  if (!container || !counter) return;
+
   container.innerHTML = "";
 
   if (quiz.length === 0) {
     container.innerHTML = "<p>No flashcards yet.</p>";
-    document.getElementById("counter").innerText = "0 / 0";
+    counter.innerText = "0 / 0";
     return;
   }
 
@@ -104,19 +137,14 @@ function renderCard() {
 
   card.innerHTML = `
     <div class="inner">
-
-      <!-- FRONT -->
       <div class="front">
         ${item.question}
         <button class="delete-btn" onclick="deleteCurrentCard(event)">✖</button>
       </div>
-
-      <!-- BACK -->
       <div class="back">
         ${item.answer}
         <button class="delete-btn" onclick="deleteCurrentCard(event)">✖</button>
       </div>
-
     </div>
   `;
 
@@ -124,18 +152,10 @@ function renderCard() {
 
   container.appendChild(card);
 
-  updateCounter();
+  counter.innerText = `${currentIndex + 1} / ${quiz.length}`;
 }
-// SUBMIT
-window.submitExam = function () {
-  let score = 0;
-  quiz.forEach((item, index) => {
-    const ans = document.getElementById("ans"+index).value.trim();
-    if (ans.toLowerCase() === item.answer.toLowerCase()) score++;
-  });
-  document.getElementById("score").innerText = `Score: ${score} / ${quiz.length}`;
-};
 
+// NAVIGATION
 window.nextCard = function () {
   if (currentIndex < quiz.length - 1) {
     currentIndex++;
@@ -150,135 +170,46 @@ window.prevCard = function () {
   }
 };
 
-function updateCounter() {
-  document.getElementById("counter").innerText =
-    `${currentIndex + 1} / ${quiz.length}`;
-};
-
-window.nextCard = function () {
-  if (currentIndex < quiz.length - 1) {
-    currentIndex++;
-    renderCard();
-  }
-};
-
-window.prevCard = function () {
-  if (currentIndex > 0) {
-    currentIndex--;
-    renderCard();
-  }
-};
-
+// DELETE CURRENT CARD
 window.deleteCurrentCard = function (event) {
-  event.stopPropagation(); // para hindi mag flip pag pinindot delete
+  event.stopPropagation();
 
   if (!confirm("Delete this card?")) return;
 
   quiz.splice(currentIndex, 1);
   localStorage.setItem("quizData", JSON.stringify(quiz));
 
-  // adjust index
-  if (currentIndex >= quiz.length) {
-    currentIndex = quiz.length - 1;
-  }
-
+  if (currentIndex >= quiz.length) currentIndex = quiz.length - 1;
   if (currentIndex < 0) currentIndex = 0;
 
   renderCard();
 };
-function saveDecks() {
-  localStorage.setItem("decks", JSON.stringify(decks));
-  localStorage.setItem("currentDeck", currentDeck);
-}
-window.createDeck = function () {
-  const name = document.getElementById("deckName").value.trim();
-  if (!name) return alert("Enter deck name!");
 
-  if (decks[name]) return alert("Deck already exists!");
-
-  decks[name] = [];
-  currentDeck = name;
-
-  saveDecks();
-  updateDeckList();
-  alert("Deck created!");
-};
-window.switchDeck = function () {
-  const select = document.getElementById("deckList");
-  currentDeck = select.value;
-
-  saveDecks();
-  renderCard();
-};
-window.deleteDeck = function () {
-  if (!currentDeck) return;
-
-  if (!confirm("Delete this deck?")) return;
-
-  delete decks[currentDeck];
-  currentDeck = null;
-
-  saveDecks();
-  updateDeckList();
-  document.getElementById("cardContainer").innerHTML = "";
-};
-function updateDeckList() {
-  const select = document.getElementById("deckList");
-  select.innerHTML = "";
-
-  Object.keys(decks).forEach(deck => {
-    const option = document.createElement("option");
-    option.value = deck;
-    option.textContent = deck;
-    if (deck === currentDeck) option.selected = true;
-    select.appendChild(option);
-  });
-}
-
-window.shuffleCards = function () {
-  if (quiz.length === 0) return;
-
-  // Fisher-Yates Shuffle Algorithm
-  for (let i = quiz.length - 1; i > 0; i--) {
-    let j = Math.floor(Math.random() * (i + 1));
-    [quiz[i], quiz[j]] = [quiz[j], quiz[i]];
-  }
-
-  // reset index after shuffle
-  currentIndex = 0;
-
-  // rerender card
-  renderCard();
-
-  alert("Cards shuffled! 🔀");
-};
-
+// SETTINGS
 window.toggleSettings = function () {
   const card = document.getElementById("settingsCard");
-  card.classList.toggle("hidden");
+  if (card) card.classList.toggle("hidden");
 };
 
 document.addEventListener("click", function (e) {
   const card = document.getElementById("settingsCard");
   const btn = document.getElementById("settingsBtn");
 
-  if (!card.contains(e.target) && !btn.contains(e.target)) {
+  if (card && btn && !card.contains(e.target) && !btn.contains(e.target)) {
     card.classList.add("hidden");
   }
 });
 
-// OPEN PROFILE
+// PROFILE
 window.openProfile = function () {
-  document.getElementById("settingsCard").classList.add("hidden");
-  document.getElementById("profileCard").classList.remove("hidden");
+  document.getElementById("settingsCard")?.classList.add("hidden");
+  document.getElementById("profileCard")?.classList.remove("hidden");
 
-  // load saved data
   document.getElementById("username").value = localStorage.getItem("username") || "";
   document.getElementById("email").value = localStorage.getItem("email") || "";
   document.getElementById("bio").value = localStorage.getItem("bio") || "";
 };
 
-// SAVE PROFILE
 window.saveProfile = function () {
   localStorage.setItem("username", document.getElementById("username").value);
   localStorage.setItem("email", document.getElementById("email").value);
@@ -287,85 +218,42 @@ window.saveProfile = function () {
   alert("Profile Saved!");
 };
 
-// OPEN MUSIC
-let isPlaying = false;
-
-window.openMusic = function () {
-  document.getElementById("settingsCard").classList.add("hidden");
-  document.getElementById("musicCard").classList.remove("hidden");
-};
-
-// BACK TO SETTINGS
 window.backToSettings = function () {
-  document.getElementById("profileCard").classList.add("hidden");
-  document.getElementById("musicCard").classList.add("hidden");
-  document.getElementById("settingsCard").classList.remove("hidden");
+  document.getElementById("profileCard")?.classList.add("hidden");
+  document.getElementById("aboutCard")?.classList.add("hidden");
+  document.getElementById("settingsCard")?.classList.remove("hidden");
 };
 
-let playlist = [
-  "music1.mp3",
-  "music2.mp3",
-  "music3.mp3",
-  "music4.mp3",
-  "music5.mp3",
-  "music6.mp3"
-];
-
+// MUSIC
+let playlist = ["music1.mp3","music2.mp3","music3.mp3","music4.mp3","music5.mp3","music6.mp3"];
 let currentSong = 0;
-let audio = document.getElementById("audioPlayer");
 
-// LOAD SONG
 function loadSong(index) {
+  if (!audio) return;
+
   audio.src = playlist[index];
-
-  let name = playlist[index].split("/").pop();
-  document.getElementById("musicTitle").innerText = name;
+  document.getElementById("musicTitle").innerText = playlist[index];
 }
 
-// OPEN MUSIC
-window.openMusic = function () {
-  document.getElementById("settingsCard").classList.add("hidden");
-  document.getElementById("musicCard").classList.remove("hidden");
-
-  if (!audio.src) {
-    loadSong(currentSong);
-  }
-};
-
-// PLAY / PAUSE
 window.togglePlay = function () {
-  if (audio.paused) {
-    audio.play();
-  } else {
-    audio.pause();
-  }
+  if (!audio) return;
+  audio.paused ? audio.play() : audio.pause();
 };
 
-// NEXT
 window.nextMusic = function () {
-  currentSong++;
-  if (currentSong >= playlist.length) currentSong = 0;
-
+  currentSong = (currentSong + 1) % playlist.length;
   loadSong(currentSong);
   audio.play();
 };
 
-// PREVIOUS
 window.prevMusic = function () {
-  currentSong--;
-  if (currentSong < 0) currentSong = playlist.length - 1;
-
+  currentSong = (currentSong - 1 + playlist.length) % playlist.length;
   loadSong(currentSong);
   audio.play();
 };
 
-// AUTO NEXT PAG TAPOS
-audio.addEventListener("ended", function () {
-  nextMusic();
-});
-
+// ABOUT
 window.openAbout = function () {
-  document.getElementById("settingsCard").classList.add("hidden");
-  document.getElementById("aboutadminCard").classList.remove("hidden");
-}
-
+  document.getElementById("settingsCard")?.classList.add("hidden");
+  document.getElementById("aboutadminCard")?.classList.remove("hidden");
+};
