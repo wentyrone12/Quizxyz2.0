@@ -106,7 +106,7 @@ button {
   border: none;
   color: var(--btn-text);
   font-weight: bold;
-  font-size: 2rem;
+  font-size: 35px;
 }
 #exam{
   display: none;
@@ -416,6 +416,12 @@ h2{
     justify-self: center;
     max-width: 600px;
   }
+
+  .btn-add{
+  font-size: 25px;
+  color: var(--btn-texts);
+  background-color: var(--btn-btn);
+}
 
   button {
     display: inline-block;
