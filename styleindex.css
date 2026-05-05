@@ -417,6 +417,35 @@ h2{
     max-width: 600px;
   }
 
+  .settings-card {
+  text-align: center;
+  position: fixed;
+  top: 150px;
+  right:420px;
+  width: 400px;
+  height: 300px;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 0 15px var(--btn-bgs);
+  z-index: 999;
+  color: var(--color-txt);
+  animation: fadeIn 0.3s ease;
+}
+
+.setting-item {
+  text-align: center;
+  position: relative;
+  top: -38px;
+  font-size: 30px;
+  padding: 10px;
+  margin-top: 40px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
   .btn-add{
   font-size: 25px;
   color: var(--btn-texts);

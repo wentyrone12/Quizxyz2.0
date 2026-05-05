@@ -437,6 +437,84 @@ h2{
     font-size: 30px;
   }
 
+  .settings-card {
+  text-align: center;
+  position: fixed;
+  top: 150px;
+  right:420px;
+  width: 400px;
+  height: 300px;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 0 15px var(--btn-bgs);
+  z-index: 999;
+  color: var(--color-txt);
+  animation: fadeIn 0.3s ease;
+}
+
+.setting-item {
+  text-align: center;
+  position: relative;
+  top: -18px;
+  font-size: 30px;
+  padding: 10px;
+  margin-top: 10px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
+.music-controls {
+  position: relative;
+  top: 50px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 30px 0;
+}
+
+.music-controls button {
+  width: 190px;
+  height: 80px;
+  font-size: 20px;
+}
+.music-player{
+  font-size: 28px;
+}
+#musicTitle{
+  font-size: 16px;
+}
+
+.btn-musicback{
+  position: relative;
+  top: 100px;
+}
+
+#profileCard input {
+  width: 80%;
+  height: 90px;
+  position: relative;
+  top: 180px;
+  margin: 10px auto;
+  font-size: 16px;
+}
+.setting-profile{
+  font-size: 40px;
+}
+.setting-convo{
+  font-size: 48px;
+}
+.btn-saveback{
+  position: relative;
+  bottom: -10px;
+}
+.btn-saveback-1{
+  position: relative;
+  bottom: -400px;
+}
+
   .box {
     height: 250px;
     position: relative;

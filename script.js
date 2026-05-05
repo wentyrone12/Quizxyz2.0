@@ -85,7 +85,18 @@ window.onload = async function () {
     audio.addEventListener("ended", function () {
       nextMusic();
     });
+    loadSong(currentSong);
   }
+
+  window.openMusic = function () {
+  document.getElementById("settingsCard")?.classList.add("hidden");
+  document.getElementById("musicCard")?.classList.remove("hidden");
+
+  if (audio && !audio.src) {
+    loadSong(currentSong);
+  }
+};
+
 
   // LOAD SHARED QUIZ
   const params = new URLSearchParams(window.location.search);
@@ -220,7 +231,9 @@ window.saveProfile = function () {
 
 window.backToSettings = function () {
   document.getElementById("profileCard")?.classList.add("hidden");
-  document.getElementById("aboutCard")?.classList.add("hidden");
+  document.getElementById("musicCard")?.classList.add("hidden"); // 🔥 IMPORTANT
+  document.getElementById("aboutadminCard")?.classList.add("hidden"); // safety
+
   document.getElementById("settingsCard")?.classList.remove("hidden");
 };
 
