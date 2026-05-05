@@ -49,6 +49,7 @@ h1 {
   font-size: 1.8rem;
 }
 .shuffle{
+  font-size: 30px;
   position: fixed;
   color: var(--btn-text);
   bottom: 200px;
@@ -179,8 +180,8 @@ div .hidden-1{
 
 /* THEME TOGGLE BUTTON */
 #themeToggle {
-  width: 75px;
-  height: 75px;
+  width: 105px;
+  height: 105px;
   position: fixed;
   top: 10px;
   right: 10px;
@@ -193,8 +194,8 @@ div .hidden-1{
   color: var(--card-border);
   float: left;
   position: absolute;
-  left: 80px;
-  font-size: 24px;
+  left: 110px;
+  font-size: 40px;
   border: 2px solid var(--card-border);
   padding: 10px;
   border-radius: 20px;
@@ -241,7 +242,7 @@ div .hidden-1{
   margin: 20PX;
   width: 230px;
   height: 150px;
-  font-size: 16px;
+  font-size: 38px;
   border-radius: 19px;
 }
 #nextBtn{
@@ -250,7 +251,7 @@ div .hidden-1{
   margin: 20PX;
   width: 230px;
   height: 150px;
-  font-size: 16px;
+  font-size: 38px;
   border-radius: 19px;
 }
 #counter {
@@ -304,8 +305,8 @@ h2{
   position: fixed;
   top: 10px;
   left: 10px;
-  width: 75px;
-  height: 75px;
+  width: 105px;
+  height: 105px;
   border-radius: 20px;
   font-size: 26px;
   background: var(--btn-bg);

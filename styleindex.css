@@ -42,7 +42,7 @@ body.light-mode {
 h1 {
   display: inline-block;
   margin-top: 20px;
-  font-size: 1.8rem;
+  font-size: 3rem;
 }
 .shuffle{
   position: fixed;
@@ -106,7 +106,7 @@ button {
   border: none;
   color: var(--btn-text);
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 2rem;
 }
 #exam{
   display: none;
@@ -197,6 +197,7 @@ div .hidden-1{
   text-decoration: none;
 }
 .btn-add{
+  font-size: 38px;
   color: var(--btn-texts);
   background-color: var(--btn-btn);
 }
@@ -259,7 +260,7 @@ div .hidden-1{
 h2{
   justify-self: center;
   display: inline-block;
-  font-size: 50px;
+  font-size: 65px;
 }
 .FC-tag{
   display: inline-block;
