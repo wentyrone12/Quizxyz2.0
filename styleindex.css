@@ -360,12 +360,13 @@ h2{
   font-size: 40px;
 }
 #profileCard input {
-  width: 80%;
-  height: 90px;
+  width: 85%;
+  height: 120px;
   position: relative;
   top: 180px;
-  margin: 10px auto;
-  font-size: 16px;
+  margin: 20px auto;
+  font-size: 32px;
+  border-radius: 30px;
 }
 
 .btn-saveback{
@@ -374,7 +375,7 @@ h2{
 }
 .btn-saveback-1{
   position: relative;
-  bottom: -400px;
+  bottom: -300px;
 }
 
 /* ANIMATION */

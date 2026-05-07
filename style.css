@@ -159,16 +159,16 @@ div .hidden-1{
 .back { transform: rotateY(180deg); }
 
 .card .delete-btn {
-  width: 30px;
-  height: 28px;
+  width: 80px;
+  height: 80px;
   position: absolute;
   top: 5px;
   right: 5px;
   background: red;
   color: #fff;
   padding: 2px 6px;
-  font-size: 0.8rem;
-  border-radius: 4px;
+  font-size: 38px;
+  border-radius: 30px;
 }
 
 /* EXAM MODE */
@@ -384,12 +384,13 @@ h2{
 }
 
 #profileCard input {
-  width: 80%;
-  height: 90px;
+  width: 85%;
+  height: 120px;
   position: relative;
   top: 180px;
-  margin: 10px auto;
-  font-size: 16px;
+  margin: 20px auto;
+  border-radius: 30px;
+  font-size: 32px;
 }
 .setting-profile{
   font-size: 40px;
@@ -403,7 +404,7 @@ h2{
 }
 .btn-saveback-1{
   position: relative;
-  bottom: -400px;
+  bottom: -300px;
 }
 
 @keyframes fadeIn {

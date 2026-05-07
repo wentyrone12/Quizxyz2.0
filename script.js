@@ -181,6 +181,33 @@ window.prevCard = function () {
   }
 };
 
+window.shuffleCards = function () {
+
+  if (quiz.length <= 1) {
+    alert("Not enough cards to shuffle!");
+    return;
+  }
+
+  // Fisher-Yates Shuffle
+  for (let i = quiz.length - 1; i > 0; i--) {
+
+    let j = Math.floor(Math.random() * (i + 1));
+
+    [quiz[i], quiz[j]] = [quiz[j], quiz[i]];
+  }
+
+  // save shuffled order
+  localStorage.setItem("quizData", JSON.stringify(quiz));
+
+  // reset to first card
+  currentIndex = 0;
+
+  // rerender
+  renderCard();
+
+  alert("🔀 Cards Shuffled!");
+};
+
 // DELETE CURRENT CARD
 window.deleteCurrentCard = function (event) {
   event.stopPropagation();
@@ -270,3 +297,39 @@ window.openAbout = function () {
   document.getElementById("settingsCard")?.classList.add("hidden");
   document.getElementById("aboutadminCard")?.classList.remove("hidden");
 };
+
+// 📱 SWIPE FLASHCARD
+let startX = 0;
+let endX = 0;
+
+const cardContainer = document.getElementById("cardContainer");
+
+if (cardContainer) {
+
+  cardContainer.addEventListener("touchstart", (e) => {
+    startX = e.touches[0].clientX;
+  });
+
+  cardContainer.addEventListener("touchend", (e) => {
+    endX = e.changedTouches[0].clientX;
+
+    handleSwipe();
+  });
+
+}
+
+function handleSwipe() {
+
+  let diff = startX - endX;
+
+  // 👉 Swipe Left = Next
+  if (diff > 50) {
+    nextCard();
+  }
+
+  // 👈 Swipe Right = Previous
+  else if (diff < -50) {
+    prevCard();
+  }
+
+}
