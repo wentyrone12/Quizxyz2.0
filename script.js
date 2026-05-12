@@ -333,3 +333,29 @@ function handleSwipe() {
   }
 
 }
+
+
+// 🔥 DELETE ALL CARDS
+window.deleteAllCards = function () {
+
+  if (quiz.length === 0) {
+    alert("No cards to delete!");
+    return;
+  }
+
+  if (!confirm("Are you sure you want to delete ALL flashcards?")) return;
+
+  // clear array
+  quiz = [];
+
+  // remove localStorage
+  localStorage.removeItem("quizData");
+
+  // reset index
+  currentIndex = 0;
+
+  // rerender
+  renderCard();
+
+  alert("🗑 All flashcards deleted!");
+};

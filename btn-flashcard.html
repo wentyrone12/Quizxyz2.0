@@ -13,7 +13,6 @@
     <button id="settingsBtn" class="settings-btn" onclick="toggleSettings()">⚙️</button>
 
 <div id="settingsCard" class="settings-card hidden">
-
   <div class="setting-item" onclick="openProfile()">👤 Profile</div>
   <div class="setting-item" onclick="openMusic()">🎵 Music</div>
   <div class="setting-item">💬Conversation<br>(Coming soon)</div>
@@ -68,13 +67,15 @@
             <span id="counter">0 / 0</span>
             <div id="cardContainer"></div>
 
-            <div class="nav">
-                <button id="prevBtn" onclick="prevCard()">⬅Previous</button>
-                <button class="shuffle" onclick="shuffleCards()">🔀 Shuffle</button>
-                <button id="nextBtn" onclick="nextCard()">Next➡</button>
-            </div>
+              <div class="nav">
+                  <button id="prevBtn" onclick="prevCard()">⬅Previous</button>
+                  <button class="shuffle" onclick="shuffleCards()">🔀 Shuffle</button>
+                  <button id="nextBtn" onclick="nextCard()">Next➡</button>
+              </div>
             </div>
         </div>
+
+        <button class="delete-all-btn" onclick="deleteAllCards()">🗑 Delete All</button>
 
         <div class="nametag-1">Made by Wenxyz</div>
 
