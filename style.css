@@ -22,14 +22,15 @@ body {
   --btn-borders: rgb(255, 255, 255);
   --btn-bgs: cyan;
 
-  --case-1: rgb(114, 114, 114);
-  --case-1-text: rgb(0, 0, 0);
+  --case-1: rgb(0, 0, 0);
+  --case-1-text: rgb(148, 148, 148);
+  --text-1: gold;
 }
 
 body.light-mode {
-  --bg: #f9f9f9;
+  --bg: #ffffff;
   --text: #007700;
-  --card-bg: rgb(255, 255, 255);
+  --card-bg: rgb(253, 253, 253);
   --card-border: #007700;
   --btn-bg: #007700;
   --btn-text: #fff;
@@ -41,6 +42,7 @@ body.light-mode {
 
   --case-1: black;
    --case-1-text: rgb(213, 255, 4);
+   --text-1: green ;
 }
 
 h1 {
@@ -147,6 +149,7 @@ div .hidden-1{
   backface-visibility: hidden;
   border-radius: 25px;
   padding: 10px;
+  overflow: hidden;
   box-sizing: border-box;
   font-size: 42px;
   overflow-wrap: break-word;
@@ -156,8 +159,14 @@ div .hidden-1{
   box-shadow: 0 0 15px 5px var(--btn-bgs);
 }
 
-.back { transform: rotateY(180deg); }
-
+.back { transform: rotateY(180deg); color: var(--text-1); }
+.answer{
+  font-size: 40px;
+  position: fixed;
+  top: 0;
+  margin-left: 30px;
+  left: 0;
+}
 .card .delete-btn {
   width: 80px;
   height: 80px;
@@ -230,7 +239,7 @@ div .hidden-1{
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 0.6s;
+  transition: transform 0.2s;
 }
 
 .card.flip .inner {
@@ -343,8 +352,8 @@ h2{
 .setting-item {
   text-align: center;
   position: relative;
-  top: 190px;
-  font-size: 50px;
+  top: 250px;
+  font-size: 70px;
   padding: 10px;
   margin-top: 40px;
   cursor: pointer;
@@ -369,7 +378,7 @@ h2{
 .music-controls button {
   width: 190px;
   height: 80px;
-  font-size: 20px;
+  font-size: 40px;
 }
 .music-player{
   font-size: 70px;
@@ -381,6 +390,7 @@ h2{
 .btn-musicback{
   position: relative;
   top: 400px;
+  font-size: 30px;
 }
 
 #profileCard input {
@@ -401,10 +411,12 @@ h2{
 .btn-saveback{
   position: relative;
   bottom: -10px;
+  font-size: 30px;
 }
 .btn-saveback-1{
   position: relative;
   bottom: -300px;
+  font-size: 30px;
 }
 
 @keyframes fadeIn {

@@ -152,7 +152,7 @@ function renderCard() {
         ${item.question}
         <button class="delete-btn" onclick="deleteCurrentCard(event)">✖</button>
       </div>
-      <div class="back">
+      <div class="back"> <p class="answer" >Answer</p>
         ${item.answer}
         <button class="delete-btn" onclick="deleteCurrentCard(event)">✖</button>
       </div>
