@@ -265,7 +265,7 @@ window.backToSettings = function () {
 };
 
 // MUSIC
-let playlist = ["music1.mp3","music2.mp3","music3.mp3","music4.mp3","music5.mp3","music6.mp3"];
+let playlist = ["music1.mp3","music2.mp3","music3.mp3","music4.mp3","music5.mp3","music6.mp3","music7.mp3","music8.mp3","music9.mp3","music10.mp3","music11.mp3","music12.mp3"];
 let currentSong = 0;
 
 function loadSong(index) {
