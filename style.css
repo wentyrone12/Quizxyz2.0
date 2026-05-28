@@ -41,8 +41,8 @@ body.light-mode {
   --btn-bgs: red;
 
   --case-1: black;
-   --case-1-text: rgb(213, 255, 4);
-   --text-1: green ;
+  --case-1-text: rgb(213, 255, 4);
+  --text-1: green;
 }
 
 h1 {
@@ -50,7 +50,8 @@ h1 {
   margin-top: 20px;
   font-size: 1.8rem;
 }
-.shuffle{
+
+.shuffle {
   font-size: 30px;
   position: fixed;
   color: var(--btn-text);
@@ -60,23 +61,28 @@ h1 {
   height: 100px;
   animation: wow 3s ease-in infinite;
 }
+
 @keyframes wow {
-  0%{
+  0% {
     background-color: cyan;
   }
-  25%{
+
+  25% {
     background-color: orange;
   }
-  50%{
+
+  50% {
     background-color: gold;
   }
-  75%{
+
+  75% {
     background-color: lightgreen;
   }
-  100%{
+
+  100% {
     background-color: red;
   }
-  
+
 }
 
 .box {
@@ -87,9 +93,11 @@ h1 {
   height: 500px;
   margin: 15px 0;
 }
-.box1{
+
+.box1 {
   margin: 12px;
 }
+
 input {
   background-color: white;
   width: 750px;
@@ -101,6 +109,7 @@ input {
   box-sizing: border-box;
   font-size: 1.5rem;
 }
+
 button {
   position: relative;
   border-radius: 20px;
@@ -115,13 +124,18 @@ button {
   font-weight: bold;
   font-size: 1rem;
 }
-#exam{
+
+#exam {
   display: none;
 }
-div .hidden-1{
+
+div .hidden-1 {
   display: none;
 }
-.hidden { display: none; }
+
+.hidden {
+  display: none;
+}
 
 .inner {
   width: 100%;
@@ -132,11 +146,20 @@ div .hidden-1{
   border-radius: 10px;
 }
 
+.questiontag {
+  font-size: 40px;
+  position: fixed;
+  top: 0;
+  margin-left: 0px;
+  left: -40px;
+}
+
 .card.flip .inner {
   transform: rotateY(180deg);
 }
 
-.front, .back {
+.front,
+.back {
   color: var(--btn-borders);
   position: absolute;
   left: -70px;
@@ -159,14 +182,19 @@ div .hidden-1{
   box-shadow: 0 0 15px 5px var(--btn-bgs);
 }
 
-.back { transform: rotateY(180deg); color: var(--text-1); }
-.answer{
+.back {
+  transform: rotateY(180deg);
+  color: var(--text-1);
+}
+
+.answer {
   font-size: 40px;
   position: fixed;
   top: 0;
   margin-left: 30px;
   left: 0;
 }
+
 .card .delete-btn {
   width: 80px;
   height: 80px;
@@ -196,7 +224,8 @@ div .hidden-1{
   right: 10px;
   z-index: 1000;
 }
-.btn-back{
+
+.btn-back {
   margin: 30px 0 0 20px;
   justify-self: center;
   justify-content: center;
@@ -210,10 +239,86 @@ div .hidden-1{
   border-radius: 20px;
   text-decoration: none;
 }
-.btn-add{
+
+.qa-container {
+  max-height: 46vh;
+  overflow: auto;
+  padding-right: 5px;
+  margin-top: 15px;
+}
+
+.qa-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.qa-container::-webkit-scrollbar-thumb {
+  background: #00ff88;
+  border-radius: 10px;
+}
+
+.qa-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: 0.3s;
+  backdrop-filter: blur(10px);
+}
+
+.qa-item:hover {
+  transform: scale(1.01);
+  border-color: #00ff88;
+}
+
+.qa-question {
+  text-align: left;
+  font-size: 40px;
+  font-weight: bold;
+  color: #00ff88;
+  word-wrap: break-word;
+}
+
+.qa-answer {
+  text-align: left;
+  margin-top: 12px;
+  font-size: 40px;
+  color: white;
+  line-height: 1.5;
+  display: none;
+  animation: fadeDown 0.3s ease;
+}
+
+.qa-item.active .qa-answer {
+  display: block;
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.qa-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.btn-add {
   color: var(--btn-texts);
   background-color: var(--btn-btn);
 }
+
 #cardContainer {
   display: flex;
   justify-items: center;
@@ -245,7 +350,8 @@ div .hidden-1{
 .card.flip .inner {
   transform: rotateY(180deg);
 }
-#prevBtn{
+
+#prevBtn {
   position: relative;
   top: 355px;
   margin: 20PX;
@@ -254,7 +360,8 @@ div .hidden-1{
   font-size: 38px;
   border-radius: 19px;
 }
-#nextBtn{
+
+#nextBtn {
   position: relative;
   top: 355px;
   margin: 20PX;
@@ -263,6 +370,7 @@ div .hidden-1{
   font-size: 38px;
   border-radius: 19px;
 }
+
 #counter {
   position: relative;
   top: 355px;
@@ -270,16 +378,19 @@ div .hidden-1{
   font-size: 40px;
   font-weight: bold;
 }
-h2{
+
+h2 {
   justify-self: center;
   display: inline-block;
   font-size: 50px;
 }
-.FC-tag{
+
+.FC-tag {
   display: inline-block;
   position: relative;
-  right:-40px;
+  right: -40px;
 }
+
 .card {
   position: relative;
 }
@@ -298,12 +409,14 @@ h2{
   font-size: 16px;
   z-index: 10;
 }
-.nametag{
+
+.nametag {
   position: relative;
   bottom: -400px;
   color: gray;
 }
-.nametag-1{
+
+.nametag-1 {
   position: relative;
   bottom: -520px;
   color: gray;
@@ -334,7 +447,7 @@ h2{
 .settings-card {
   text-align: center;
   position: fixed;
-  top: 330px;
+  top: 350px;
   right: 127px;
   width: 700px;
   height: 1000px;
@@ -352,7 +465,7 @@ h2{
 .setting-item {
   text-align: center;
   position: relative;
-  top: 250px;
+  top: 300px;
   font-size: 70px;
   padding: 10px;
   margin-top: 40px;
@@ -380,14 +493,16 @@ h2{
   height: 80px;
   font-size: 40px;
 }
-.music-player{
+
+.music-player {
   font-size: 70px;
 }
-#musicTitle{
+
+#musicTitle {
   font-size: 40px;
 }
 
-.btn-musicback{
+.btn-musicback {
   position: relative;
   top: 400px;
   font-size: 30px;
@@ -402,20 +517,24 @@ h2{
   border-radius: 30px;
   font-size: 32px;
 }
-.setting-profile{
+
+.setting-profile {
   font-size: 40px;
 }
-.setting-convo{
+
+.setting-convo {
   font-size: 48px;
 }
-.btn-saveback{
+
+.btn-saveback {
   position: relative;
   bottom: -10px;
   font-size: 30px;
 }
-.btn-saveback-1{
+
+.btn-saveback-1 {
   position: relative;
-  bottom: -300px;
+  bottom: 0px;
   font-size: 30px;
 }
 
@@ -424,6 +543,7 @@ h2{
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -438,7 +558,8 @@ h2{
     justify-items: center;
     padding: 0 100px;
   }
-  .FC-tag{
+
+  .FC-tag {
     position: relative;
     left: 30px;
   }
@@ -446,87 +567,94 @@ h2{
   h1 {
     font-size: 18px;
   }
-  h2{
+
+  h2 {
     font-size: 30px;
   }
 
   .settings-card {
-  text-align: center;
-  position: fixed;
-  top: 150px;
-  right:420px;
-  width: 400px;
-  height: 300px;
-  background: var(--card-bg);
-  border: 2px solid var(--card-border);
-  border-radius: 15px;
-  padding: 15px;
-  box-shadow: 0 0 15px var(--btn-bgs);
-  z-index: 999;
-  color: var(--color-txt);
-  animation: fadeIn 0.3s ease;
-}
+    text-align: center;
+    position: fixed;
+    top: 150px;
+    right: 420px;
+    width: 400px;
+    height: 300px;
+    background: var(--card-bg);
+    border: 2px solid var(--card-border);
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 0 15px var(--btn-bgs);
+    z-index: 999;
+    color: var(--color-txt);
+    animation: fadeIn 0.3s ease;
+  }
 
-.setting-item {
-  text-align: center;
-  position: relative;
-  top: -18px;
-  font-size: 30px;
-  padding: 10px;
-  margin-top: 10px;
-  cursor: pointer;
-  border-radius: 10px;
-  transition: 0.2s;
-}
+  .setting-item {
+    text-align: center;
+    position: relative;
+    top: -18px;
+    font-size: 30px;
+    padding: 10px;
+    margin-top: 10px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: 0.2s;
+  }
 
-.music-controls {
-  position: relative;
-  top: 50px;
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 30px 0;
-}
+  .music-controls {
+    position: relative;
+    top: 50px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 30px 0;
+  }
 
-.music-controls button {
-  width: 190px;
-  height: 80px;
-  font-size: 20px;
-}
-.music-player{
-  font-size: 28px;
-}
-#musicTitle{
-  font-size: 16px;
-}
+  .music-controls button {
+    width: 190px;
+    height: 80px;
+    font-size: 20px;
+  }
 
-.btn-musicback{
-  position: relative;
-  top: 100px;
-}
+  .music-player {
+    font-size: 28px;
+  }
 
-#profileCard input {
-  width: 80%;
-  height: 90px;
-  position: relative;
-  top: 180px;
-  margin: 10px auto;
-  font-size: 16px;
-}
-.setting-profile{
-  font-size: 40px;
-}
-.setting-convo{
-  font-size: 48px;
-}
-.btn-saveback{
-  position: relative;
-  bottom: -10px;
-}
-.btn-saveback-1{
-  position: relative;
-  bottom: -400px;
-}
+  #musicTitle {
+    font-size: 16px;
+  }
+
+  .btn-musicback {
+    position: relative;
+    top: 100px;
+  }
+
+  #profileCard input {
+    width: 80%;
+    height: 90px;
+    position: relative;
+    top: 180px;
+    margin: 10px auto;
+    font-size: 16px;
+  }
+
+  .setting-profile {
+    font-size: 40px;
+  }
+
+  .setting-convo {
+    font-size: 48px;
+  }
+
+  .btn-saveback {
+    position: relative;
+    bottom: -10px;
+  }
+
+  .btn-saveback-1 {
+    position: relative;
+    bottom: -400px;
+  }
 
   .box {
     height: 250px;
@@ -553,54 +681,63 @@ h2{
     width: 300px;
     height: 40px;
   }
-  .nametag{
+
+  .nametag {
     position: relative;
     top: 60px;
     font-size: 13px;
   }
-  .nametag-1{
+
+  .nametag-1 {
     position: relative;
     top: 60px;
     font-size: 13px;
   }
-.btn-back{
-  font-size: 15px;
-}
-#mother-container{
-  justify-items: center;
-  justify-self: center;
-  justify-content: center;
 
-}
-#cardContainer{
-  font-size: 3px;
-  position: relative;
-  top: -350px;
-  height: 250px;
-  width: 50px;
-}
-#prevBtn{
-  position: relative;
-  top: -3px;
-  left: -90px;
-}
-#nextBtn{
-  position: relative;
-  top: -3px;
-  right: -90px;
-}
-#counter{
-  position: relative;
-  top: 450px;
-  left: -80px;
-}
-.shuffle{
-  position: relative;
-  left: 2px;
-  top: 1px;
-}
+  .btn-back {
+    font-size: 15px;
+  }
 
-.delete-all-btn{
+  #mother-container {
+    justify-items: center;
+    justify-self: center;
+    justify-content: center;
+
+  }
+
+  #cardContainer {
+    font-size: 3px;
+    position: relative;
+    top: -350px;
+    height: 250px;
+    width: 50px;
+  }
+
+  #prevBtn {
+    position: relative;
+    top: -3px;
+    left: -90px;
+  }
+
+  #nextBtn {
+    position: relative;
+    top: -3px;
+    right: -90px;
+  }
+
+  #counter {
+    position: relative;
+    top: 450px;
+    left: -80px;
+  }
+
+  .shuffle {
+    position: relative;
+    left: 2px;
+    top: 1px;
+  }
+
+  .delete-all-btn {
     background: crimson;
     color: white;
     border: none;
@@ -612,29 +749,113 @@ h2{
     cursor: pointer;
     font-weight: bold;
     transition: 0.3s;
-}
+  }
 
-.delete-all-btn:hover{
+  .delete-all-btn:hover {
     transform: scale(1.05);
-}
+  }
 
-}
+  .qa-container {
+    max-height: 75vh;
+    overflow-y: auto;
+    padding-right: 5px;
+    margin-top: 15px;
+  }
 
-.delete-all-btn{
-    background: crimson;
-    color: white;
-    border: none;
-    padding: 10px 15px;
+  .qa-container::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .qa-container::-webkit-scrollbar-thumb {
+    background: #00ff88;
     border-radius: 10px;
+  }
+
+  .qa-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
     cursor: pointer;
-    font-weight: bold;
-    position: relative;
-    top: -900px;
-    left: -365px;
-    font-size: 30px;
     transition: 0.3s;
+    backdrop-filter: blur(10px);
+  }
+
+  .qa-item:hover {
+    transform: scale(1.01);
+    border-color: #00ff88;
+  }
+
+  .qa-question {
+    font-size: 17px;
+    font-weight: bold;
+    color: #00ff88;
+    word-wrap: break-word;
+  }
+
+  .qa-answer {
+    margin-top: 12px;
+    font-size: 15px;
+    color: white;
+    line-height: 1.5;
+    display: none;
+    animation: fadeDown 0.3s ease;
+  }
+
+  .qa-item.active .qa-answer {
+    display: block;
+  }
+
+  @keyframes fadeDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .qa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  @media(max-width:700px) {
+
+    .qa-question {
+      font-size: 15px;
+    }
+
+    .qa-answer {
+      font-size: 14px;
+    }
+
+  }
+
 }
 
-.delete-all-btn:hover{
-    transform: scale(1.05);
+.delete-all-btn {
+  background: crimson;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  position: relative;
+  top: -900px;
+  left: -365px;
+  font-size: 30px;
+  transition: 0.3s;
+}
+
+.delete-all-btn:hover {
+  transform: scale(1.05);
 }

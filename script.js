@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, getDoc } 
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, getDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDXlfkDKzeBAkXCWSg3G1914XXC1XN2AAg",
@@ -50,7 +50,7 @@ window.addQuestion = function () {
 };
 
 // DELETE
-window.deleteQuestion = function(index) {
+window.deleteQuestion = function (index) {
   if (!confirm("Delete this question?")) return;
 
   quiz.splice(index, 1);
@@ -70,7 +70,7 @@ window.saveQuizOnline = async function () {
     navigator.clipboard.writeText(link); // auto copy
     alert("✅ Link copied!🔗");
 
-  } catch(e) {
+  } catch (e) {
     console.error(e);
     alert("Error saving quiz");
   }
@@ -89,13 +89,13 @@ window.onload = async function () {
   }
 
   window.openMusic = function () {
-  document.getElementById("settingsCard")?.classList.add("hidden");
-  document.getElementById("musicCard")?.classList.remove("hidden");
+    document.getElementById("settingsCard")?.classList.add("hidden");
+    document.getElementById("musicCard")?.classList.remove("hidden");
 
-  if (audio && !audio.src) {
-    loadSong(currentSong);
-  }
-};
+    if (audio && !audio.src) {
+      loadSong(currentSong);
+    }
+  };
 
 
   // LOAD SHARED QUIZ
@@ -110,7 +110,7 @@ window.onload = async function () {
         localStorage.setItem("quizData", JSON.stringify(quiz));
         alert("Shared Quiz Loaded!");
       }
-    } catch(e) {
+    } catch (e) {
       console.error(e);
     }
   }
@@ -149,6 +149,7 @@ function renderCard() {
   card.innerHTML = `
     <div class="inner">
       <div class="front">
+      <p class="questiontag" >Question</p>
         ${item.question}
         <button class="delete-btn" onclick="deleteCurrentCard(event)">✖</button>
       </div>
@@ -239,14 +240,63 @@ document.addEventListener("click", function (e) {
 });
 
 // PROFILE
-window.openProfile = function () {
-  document.getElementById("settingsCard")?.classList.add("hidden");
-  document.getElementById("profileCard")?.classList.remove("hidden");
+// QUESTIONS & ANSWERS
+window.openQA = function () {
 
-  document.getElementById("username").value = localStorage.getItem("username") || "";
-  document.getElementById("email").value = localStorage.getItem("email") || "";
-  document.getElementById("bio").value = localStorage.getItem("bio") || "";
+  document.getElementById("settingsCard")?.classList.add("hidden");
+  document.getElementById("qaCard")?.classList.remove("hidden");
+
+  renderQA();
 };
+
+function renderQA() {
+
+  const container = document.getElementById("qaContainer");
+
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (quiz.length === 0) {
+
+    container.innerHTML = `
+      <div class="qa-item">
+        <div class="qa-question">
+          No flashcards available.
+        </div>
+      </div>
+    `;
+
+    return;
+  }
+
+  quiz.forEach((item, index) => {
+
+    const div = document.createElement("div");
+
+    div.className = "qa-item";
+
+    div.innerHTML = `
+      <div class="qa-question"> Q
+        ${index + 1}. ${item.question}
+      </div>
+
+      <div class="qa-answer"> Answer:
+        ${item.answer}
+      </div>
+    `;
+
+    div.addEventListener("click", () => {
+
+      div.classList.toggle("active");
+
+    });
+
+    container.appendChild(div);
+
+  });
+
+}
 
 window.saveProfile = function () {
   localStorage.setItem("username", document.getElementById("username").value);
@@ -257,7 +307,7 @@ window.saveProfile = function () {
 };
 
 window.backToSettings = function () {
-  document.getElementById("profileCard")?.classList.add("hidden");
+  document.getElementById("qaCard")?.classList.add("hidden");
   document.getElementById("musicCard")?.classList.add("hidden"); // 🔥 IMPORTANT
   document.getElementById("aboutadminCard")?.classList.add("hidden"); // safety
 
@@ -265,7 +315,7 @@ window.backToSettings = function () {
 };
 
 // MUSIC
-let playlist = ["music1.mp3","music2.mp3","music3.mp3","music4.mp3","music5.mp3","music6.mp3","music7.mp3","music8.mp3","music9.mp3","music10.mp3","music11.mp3","music12.mp3"];
+let playlist = ["music1.mp3", "music2.mp3", "music3.mp3", "music4.mp3", "music5.mp3", "music6.mp3", "music7.mp3", "music8.mp3", "music9.mp3", "music10.mp3", "music11.mp3", "music12.mp3"];
 let currentSong = 0;
 
 function loadSong(index) {

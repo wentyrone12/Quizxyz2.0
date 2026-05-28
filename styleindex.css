@@ -327,7 +327,7 @@ h2{
   height: 1000px;
   background: var(--card-bg);
   border: 2px solid var(--card-border);
-  border-radius: 15px;
+  border-radius: 25%;
   padding: 15px;
   box-shadow: 0 0 15px var(--btn-bgs);
   z-index: 999;
@@ -338,10 +338,29 @@ h2{
 /* ITEMS */
 .setting-item {
   text-align: center;
-  position: relative;
-  top: 290px;
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-size: 50px;
   padding: 10px;
+  margin-top: 40px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
+ .setting-item2 {
+  position: absolute;
+  top: 80%;
+  left: 50%;
+  color:var(--btn-btn);
+  border-radius: 35px;
+  text-decoration:none;
+  border:2px solid green;
+  transform: translate(-50%, -50%);
+  font-size: 30px;
+  padding: 15px;
   margin-top: 40px;
   cursor: pointer;
   border-radius: 10px;
