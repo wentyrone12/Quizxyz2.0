@@ -241,18 +241,18 @@ div .hidden-1 {
 }
 
 .qa-container {
-  max-height: 42vh;
+  height: 40vh;
   overflow: auto;
   padding-right: 5px;
   margin-top: 15px;
 }
 
 .qa-container::-webkit-scrollbar {
-  width: 5px;
+  width: 1px;
 }
 
 .qa-container::-webkit-scrollbar-thumb {
-  background: #00ff88;
+  background: none;
   border-radius: 10px;
 }
 
@@ -756,7 +756,7 @@ h2 {
   }
 
   .qa-container {
-    max-height: 75vh;
+    max-height: 25vh;
     overflow-y: auto;
     padding-right: 5px;
     margin-top: 15px;
