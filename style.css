@@ -24,6 +24,8 @@ body {
   --case-1: rgb(0, 0, 0);
   --case-1-text: rgb(148, 148, 148);
   --text-1: gold;
+
+  --bgcards: rgb(17, 17, 34);
 }
 
 body.light-mode {
@@ -42,6 +44,8 @@ body.light-mode {
   --case-1: black;
   --case-1-text: rgb(213, 255, 4);
   --text-1: green;
+
+  --bgcards: rgb(204, 180, 135);
 }
 
 h1 {
@@ -241,7 +245,7 @@ div .hidden-1 {
 }
 
 .qa-container {
-  height: 42vh;
+  height: 60vh;
   overflow: auto;
   padding-right: 5px;
   margin-top: 15px;
@@ -258,7 +262,7 @@ div .hidden-1 {
 
 .qa-item {
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(197, 201, 9, 0.452);
+  border: 1px solid rgba(0, 0, 0, 0.664);
   border-radius: 15px;
   padding: 15px;
   margin-bottom: 15px;
@@ -268,15 +272,16 @@ div .hidden-1 {
 }
 
 .qa-item:hover {
-  transform: scale(1.01);
-  border-color: #33f098;
+  transition: 0.2;
+  transform: scale(1.0);
+  border-color: var(--btn-btn);
 }
 
 .qa-question {
   text-align: left;
   font-size: 40px;
   font-weight: bold;
-  color: #00ff88;
+  color: var(--card-border);
   word-wrap: break-word;
 }
 
@@ -284,7 +289,7 @@ div .hidden-1 {
   text-align: left;
   margin-top: 12px;
   font-size: 40px;
-  color: white;
+  color: var(--btn-btn);
   line-height: 1.5;
   display: none;
   animation: fadeDown 0.3s ease;
@@ -383,6 +388,7 @@ h2 {
   justify-self: center;
   display: inline-block;
   font-size: 50px;
+  color: var(--btn-bgs);
 }
 
 .FC-tag {
@@ -445,14 +451,15 @@ h2 {
 
 /* SETTINGS CARD */
 .settings-card {
+  backdrop-filter: blur(10px);
   text-align: center;
   position: fixed;
-  top: 350px;
+  top: 300px;
   right: 20px;
   width: 900px;
-  height: 1000px;
+  height: 1250px;
   color: var(--case-1-text);
-  background: var(--case-1);
+  background: var(--bgcards);
   border: 2px solid var(--card-border);
   border-radius: 40px;
   padding: 15px;
@@ -460,11 +467,11 @@ h2 {
   z-index: 999;
   animation: fadeIn 0.3s ease;
 }
-
 /* ITEMS */
 .setting-item {
   text-align: center;
   position: relative;
+  color: var(--card-border);
   top: 300px;
   font-size: 70px;
   padding: 10px;
@@ -773,10 +780,11 @@ h2 {
     transform: scale(1.05);
   }
 
-  .answer{
+  .answer {
     font-size: 30px;
   }
-  .questiontag{
+
+  .questiontag {
     font-size: 30px;
   }
 
@@ -798,7 +806,7 @@ h2 {
 
   .qa-item {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(0, 255, 136, 0.2);
+    border: 1px solid rgb(71, 71, 71);
     border-radius: 15px;
     padding: 15px;
     margin-bottom: 15px;
@@ -808,21 +816,21 @@ h2 {
   }
 
   .qa-item:hover {
-    transform: scale(1.01);
-    border-color: #00ff88;
+    transform: scale(1);
+    border-color: #ff0000;
   }
 
   .qa-question {
     font-size: 17px;
     font-weight: bold;
-    color: #00ff88;
+    color: var(--btn-borders);
     word-wrap: break-word;
   }
 
   .qa-answer {
     margin-top: 12px;
     font-size: 15px;
-    color: white;
+    color: var(--text-1);
     line-height: 1.5;
     display: none;
     animation: fadeDown 0.3s ease;
