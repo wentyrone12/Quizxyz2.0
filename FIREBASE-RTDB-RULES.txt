@@ -1,0 +1,22 @@
+WHITE_QUIZXYZ - Realtime Database Rules
+
+Paste these under Firebase Console > Realtime Database > Rules.
+These rules let each signed-in Google user write/read only their own user profile and login history.
+You (the Firebase project owner) can still inspect all records from the Firebase Console.
+
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "loginHistory": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}

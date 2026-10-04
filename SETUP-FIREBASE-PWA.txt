@@ -1,0 +1,34 @@
+WHITE_QUIZXYZ 2.0 – Firebase + Install Setup
+
+1) Firebase Authentication
+Firebase Console → Authentication → Sign-in method → Google → Enable.
+
+2) Authorized domains
+Firebase Console → Authentication → Settings → Authorized domains.
+Add:
+- localhost
+- 127.0.0.1
+- wentyrone12.github.io
+
+For GitHub Pages, use your actual GitHub Pages host if it is different.
+
+3) Realtime Database
+The app records:
+- users/{uid} → latest profile + lastLogin
+- loginHistory/{uid}/{entryId} → login events
+
+If your Realtime Database rules are locked, open FIREBASE-RTDB-RULES.txt and paste those rules into:
+Realtime Database → Rules.
+
+4) GitHub Pages / installable app
+Upload all files in this folder to the same GitHub Pages directory.
+Use HTTPS (GitHub Pages provides HTTPS).
+Open the site once, then Settings → Install App.
+Android/Chrome: the button uses the browser's native PWA install prompt when available.
+iPhone/iPad: use Share → Add to Home Screen when the browser does not expose a native install prompt.
+
+5) Mandatory Google sign-in
+On the main WHITE_QUIZXYZ page, a blurred, non-dismissible Google sign-in modal appears before the Add New Card form can be used. The Question and Answer form remains visible behind the modal as a locked preview. After successful Google login, the modal disappears and the form becomes active. Signing out shows the mandatory sign-in modal again.
+
+6) Important
+Do not rename or separate manifest.json, sw.js, script.js, style.css, styleindex.css, logo.png, icon-192.png, and icon-512.png from the HTML files.

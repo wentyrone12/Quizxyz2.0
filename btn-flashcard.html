@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flashcards - WHITE_QUIZXYZ 2.0</title>
+  <link rel="icon" href="logo.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#070709">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="WHITE_QUIZXYZ">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <nav class="navbar">
+    <div class="nav-left"><a href="index.html" class="back-link">← Home</a><img src="logo.png"
+        class="nav-logo small"><span class="brand">FLASHCARD</span></div>
+    <div class="nav-right"><button id="settingsBtn" class="icon-btn" onclick="toggleSettings()">⚙️</button><button
+        id="themeToggle" class="icon-btn" onclick="toggleTheme()">🌙</button></div>
+  </nav>
+  <div id="settingsCard" class="overlay hidden">
+    <div class="overlay-card glass">
+      <div class="overlay-header">
+        <h3>Menu</h3><button class="close-btn" onclick="toggleSettings()">✕</button>
+      </div>
+      <div class="overlay-body">
+        <div class="menu-item" onclick="openQA()"><span class="menu-icon">❓</span>
+          <div><strong>Q & A List</strong>
+          </div>
+        </div>
+        <div class="menu-item" onclick="openMultipleChoice()"><span class="menu-icon">☑️</span>
+          <div><strong>Multiple Choice</strong>
+          </div>
+        </div>
+        <div class="menu-item" onclick="openMusic()"><span class="menu-icon">🎵</span>
+          <div><strong>Music play</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="qaCard" class="overlay hidden">
+    <div class="overlay-card glass large">
+      <div class="overlay-header">
+        <h3>Q & A</h3><button class="close-btn" onclick="backToSettings()">✕</button>
+      </div>
+      <div id="qaContainer" class="qa-container"></div>
+    </div>
+  </div>
+  <div id="multipleChoiceCard" class="overlay hidden">
+    <div class="overlay-card glass large multiple-choice-card">
+      <div class="overlay-header">
+        <div>
+          <h3>Multiple Choice</h3>
+          <p class="mc-subtitle">Choose the correct answer.</p>
+        </div>
+        <button class="close-btn" onclick="backToSettings()">✕</button>
+      </div>
+      <div class="multiple-choice-body">
+        <div class="mc-progress-row">
+          <span class="mc-label">Question</span>
+          <span id="mcCounter" class="counter-pill">0 / 0</span>
+        </div>
+        <div id="mcQuestionCard" class="mc-question-card"></div>
+        <div id="mcChoices" class="mc-choices"></div>
+        <div id="mcFeedback" class="mc-feedback hidden" aria-live="polite"></div>
+        <div class="mc-controls">
+          <button id="mcPrevBtn" class="btn-nav" onclick="prevMultipleChoice()">← Prev</button>
+          <button class="btn-nav shuffle-btn" onclick="shuffleMultipleChoice()">🔀 Shuffle</button>
+          <button id="mcNextBtn" class="btn-nav" onclick="nextMultipleChoice()">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="musicCard" class="overlay hidden">
+    <div class="overlay-card glass">
+      <div class="overlay-header">
+        <h3>🎵 Focus Player</h3><button class="close-btn" onclick="backToSettings()">✕</button>
+      </div>
+      <div class="music-body"><audio id="audioPlayer"></audio>
+        <div class="music-art">🎧</div>
+        <p id="musicTitle" class="music-title">No song</p>
+        <div class="music-controls"><button onclick="prevMusic()">⏮</button><button class="play-btn"
+            onclick="togglePlay()">▶ / ⏸</button><button onclick="nextMusic()">⏭</button></div>
+      </div>
+    </div>
+  </div>
+  <div id="installInfo" class="overlay hidden">
+    <div class="overlay-card glass install-info-card">
+      <div class="overlay-header">
+        <h3>📲 Install App</h3>
+        <button class="close-btn" onclick="closeInstallInfo()">✕</button>
+      </div>
+      <div class="overlay-body install-info-body">
+        <div class="install-big-icon">📱</div>
+        <p id="installInfoText">Add WHITE_QUIZXYZ to your home screen for quick access.</p>
+        <button class="btn-primary btn-full" onclick="closeInstallInfo()">Got it</button>
+      </div>
+    </div>
+  </div>
+  <div id="ConversationCard" class="overlay hidden">
+    <div class="overlay-card glass">
+      <div style="padding:20px;text-align:center">
+        <h3>Coming soon...</h3><br><button class="btn-secondary" onclick="backToSettings()">Back</button>
+      </div>
+    </div>
+  </div>
+  <main class="study-container">
+    <div id="reviewer">
+      <div id="mother-container">
+        <div class="study-header">
+          <h2 class="FC-tag">Flash Cards</h2><span id="counter" class="counter-pill">0 / 0</span>
+        </div>
+        <div id="cardContainer" class="card-stage"></div>
+        <div class="nav-controls"><button id="prevBtn" class="btn-nav" onclick="prevCard()">← Prev</button><button
+            class="btn-nav shuffle-btn" onclick="shuffleCards()">🔀 Shuffle</button><button id="nextBtn" class="btn-nav"
+            onclick="nextCard()">Next →</button></div>
+      </div>
+    </div>
+    <div class="danger-zone"><button class="delete-all-btn" onclick="deleteAllCards()">🗑 Delete All</button></div>
+    <footer class="footer">Made by <strong style="color: yellowgreen;">Wenxyz</strong></footer>
+  </main>
+  <script type="module" src="script.js"></script>
+</body>
+
+</html>

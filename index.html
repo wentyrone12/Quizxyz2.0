@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WHITE_QUIZXYZ 2.0</title>
+  <link rel="icon" href="logo.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#070709">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="WHITE_QUIZXYZ">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Grotesk:wght@600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styleindex.css">
+</head>
+
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <img src="logo.png" alt="WHITE Logo" class="nav-logo">
+      <span class="brand">WHITE<span class="brand-accent">_QUIZXYZ</span></span>
+    </div>
+    <div class="nav-right">
+      <button id="settingsBtn" class="icon-btn" onclick="toggleSettings()">⚙️</button>
+      <button id="themeToggle" class="icon-btn" onclick="toggleTheme()">🌙</button>
+    </div>
+  </nav>
+  <div id="settingsCard" class="overlay hidden">
+    <div class="overlay-card glass">
+      <div class="overlay-header">
+        <h3>Settings</h3><button class="close-btn" onclick="toggleSettings()">✕</button>
+      </div>
+      <div class="overlay-body">
+        <div class="menu-item" onclick="openAbout()"><span class="menu-icon">ℹ️</span>
+          <div><strong>About</strong>
+            <p>WHITE mission</p>
+          </div>
+        </div>
+        <a href="https://wentyrone12.github.io/Quizxyz/" class="menu-item"><span class="menu-icon">🚀</span>
+          <div><strong>WHITEQUIZ 1.0</strong>
+            <p>Legacy version</p>
+          </div>
+        </a>
+        <div class="menu-item install-menu-item" data-install-app onclick="installApp()">
+          <span class="menu-icon">📲</span>
+          <div><strong>Install App</strong>
+            <p>Add WHITE_QUIZXYZ to your home screen</p>
+          </div>
+        </div>
+        <div class="auth-mini-row">
+          <span>🔐</span>
+          <div>Google login protects the Add New Card area.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="aboutadminCard" class="overlay hidden">
+    <div class="overlay-card glass about-card">
+      <div class="overlay-header">
+        <h3>About</h3><button class="close-btn"
+          onclick="document.getElementById('aboutadminCard').classList.add('hidden');document.getElementById('settingsCard').classList.remove('hidden')">✕</button>
+      </div>
+      <div class="overlay-body">
+        <img src="logo.png" class="about-logo" alt="logo">
+        <h2>WHITE_QUIZXYZ 2.0</h2>
+        <p class="about-text"><strong>WHITE</strong> = Wendell Highly Intelligent Thinking Excellence — discipline,
+          growth, continuous learning. Smart flashcard system for memory & focus.</p>
+        <button class="btn-primary" onclick="document.getElementById('aboutadminCard').classList.add('hidden')">⬅
+          Back</button>
+      </div>
+    </div>
+  </div>
+  <div id="mandatoryAuthModal" class="mandatory-auth-overlay hidden" aria-modal="true" role="dialog"
+    aria-labelledby="mandatoryAuthTitle">
+    <div class="mandatory-auth-backdrop"></div>
+    <div class="mandatory-auth-card glass">
+      <div class="mandatory-auth-badge">SECURE ACCESS</div>
+      <div class="mandatory-auth-content">
+        <h2 id="mandatoryAuthTitle">Sign in to continue</h2>
+        <p class="mandatory-auth-texts"> Please sign in with your Google account to securely
+          access your account.
+        </p>
+      </div>
+      <button id="googleLoginBtn" class="google-login-btn google-login-modal-btn" type="button"
+        onclick="loginWithGoogle()">
+        <div class="google-mark-svg">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="30" height="30">
+            <path fill="#4285F4"
+              d="M21.35 12.27c0-.68-.06-1.33-.18-1.96H12v3.71h5.23a4.47 4.47 0 0 1-1.94 2.93v2.44h3.14c1.84-1.69 2.92-4.18 2.92-7.12Z" />
+            <path fill="#34A853"
+              d="M12 21.75c2.64 0 4.86-.88 6.48-2.36l-3.14-2.44c-.87.58-1.98.92-3.34.92-2.56 0-4.73-1.73-5.51-4.05H3.25v2.52A9.79 9.79 0 0 0 12 21.75Z" />
+            <path fill="#FBBC05"
+              d="M6.49 13.82A5.89 5.89 0 0 1 6.18 12c0-.63.11-1.24.31-1.82V7.66H3.25A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.06 1 4.34l3.24-2.52Z" />
+            <path fill="#EA4335"
+              d="M12 6.13c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.86 3.2 14.64 2.25 12 2.25a9.79 9.79 0 0 0-8.75 5.41l3.24 2.52C7.27 7.86 9.44 6.13 12 6.13Z" />
+          </svg>
+          <a class="google-tag">Continue with Google</a>
+        </div>
+      </button>
+      <div id="authMessage" class="auth-message hidden" aria-live="polite"></div>
+      <div class="mandatory-auth-note">Your information is encrypted and used for authentication only.
+      </div>
+    </div>
+  </div>
+
+  <div id="installInfo" class="overlay hidden">
+    <div class="overlay-card glass install-info-card">
+      <div class="overlay-header">
+        <h3>📲 Install App</h3>
+        <button class="close-btn" onclick="closeInstallInfo()">✕</button>
+      </div>
+      <div class="overlay-body install-info-body">
+        <div class="install-big-icon">📱</div>
+        <p id="installInfoText">Add WHITE_QUIZXYZ to your home screen for quick access.</p>
+        <button class="btn-primary btn-full" onclick="closeInstallInfo()">Got it</button>
+      </div>
+    </div>
+  </div>
+  <main class="container">
+    <section class="hero">
+      <div class="hero-badge">✦ v2.0 • Smart Learning</div>
+      <h1>Expect the,<br><span class="gradient-text">Unexpected.</span></h1>
+      <p class="hero-sub">Create, review, and share the flashcards.</p>
+    </section>
+    <section class="main-grid">
+      <div id="addCardPanel" class="card glass form-card">
+        <div id="authUserBox" class="auth-user-box hidden"></div>
+        <div class="card-header">
+          <h2>Add New Card</h2><span class="card-sub">Question front, answer back</span>
+        </div>
+        <div class="form">
+          <div class="input-group"><label>Question</label><input type="text" id="question"
+              placeholder="e.g., What is CSU??"></div>
+          <div class="input-group"><label>Answer</label><input type="text" id="answer"
+              placeholder="e.g., Cotabato State University"></div>
+          <button class="btn-primary btn-full" onclick="addQuestion()">+ Add Flashcard</button>
+        </div>
+      </div>
+      <div class="side-stack">
+        <div class="card glass stats-card">
+          <div class="stat"><span class="stat-num" id="statCount">0</span><span class="stat-label">Total Cards</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num">∞</span><span class="stat-label">Sharable</span></div>
+        </div>
+        <div class="card glass action-card">
+          <h3>Ready to study?</h3>
+          <p>Tap to flip, swipe to navigate on mobile.</p>
+          <div class="action-buttons">
+            <a href="btn-flashcard.html" class="btn-primary btn-full"
+              style="text-decoration:none;text-align:center;display:block;">📚 Open Flashcards</a>
+            <button class="btn-secondary btn-full" onclick="saveQuizOnline()">🔗 Save & Share</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer class="footer">Made by <strong style="color: red;">Wenxyz</strong> <a style="color: yellowgreen;"> •
+        WHITE_QUIZXYZ 2.0</a></footer>
+  </main>
+  <script type="module" src="script.js"></script>
+  <script>function updateStat() { try { const d = JSON.parse(localStorage.getItem('quizData') || '[]'); const el = document.getElementById('statCount'); if (el) el.textContent = d.length; } catch (e) { } } setInterval(updateStat, 500); updateStat();</script>
+</body>
+
+</html>
