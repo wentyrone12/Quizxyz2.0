@@ -1,34 +1,68 @@
-WHITE_QUIZXYZ 2.0 – Firebase + Install Setup
+WHITE_QUIZXYZ 2.0 - Firebase + PWA + Google Sync Setup
 
 1) Firebase Authentication
-Firebase Console → Authentication → Sign-in method → Google → Enable.
-
-2) Authorized domains
-Firebase Console → Authentication → Settings → Authorized domains.
-Add:
+Firebase Console -> Authentication -> Sign-in method -> Google -> Enable.
+Authentication -> Settings -> Authorized domains:
 - localhost
 - 127.0.0.1
-- wentyrone12.github.io
+- your actual GitHub Pages domain (for example wentyrone12.github.io)
 
-For GitHub Pages, use your actual GitHub Pages host if it is different.
+2) Realtime Database
+The app now stores personal data under:
+users/{uid}/decks/{deckId}
+  name
+  cards[]
+  createdAt
+  updatedAt
 
-3) Realtime Database
-The app records:
-- users/{uid} → latest profile + lastLogin
-- loginHistory/{uid}/{entryId} → login events
+Personal deck data is isolated by Firebase Authentication UID.
+Paste FIREBASE-RTDB-RULES.txt into Realtime Database -> Rules.
 
-If your Realtime Database rules are locked, open FIREBASE-RTDB-RULES.txt and paste those rules into:
-Realtime Database → Rules.
+3) Firestore share links
+The app creates public share documents under:
+quizzes/{shareId}
 
-4) GitHub Pages / installable app
-Upload all files in this folder to the same GitHub Pages directory.
-Use HTTPS (GitHub Pages provides HTTPS).
-Open the site once, then Settings → Install App.
-Android/Chrome: the button uses the browser's native PWA install prompt when available.
-iPhone/iPad: use Share → Add to Home Screen when the browser does not expose a native install prompt.
+They include:
+- title
+- data[] (question + answer)
+- ownerUid
+- ownerName
+- ownerEmail
+- ownerPhotoURL
+- createdAt
+- version
 
-5) Mandatory Google sign-in
-On the main WHITE_QUIZXYZ page, a blurred, non-dismissible Google sign-in modal appears before the Add New Card form can be used. The Question and Answer form remains visible behind the modal as a locked preview. After successful Google login, the modal disappears and the form becomes active. Signing out shows the mandatory sign-in modal again.
+Paste FIRESTORE-RULES.txt into Firestore Database -> Rules.
 
-6) Important
-Do not rename or separate manifest.json, sw.js, script.js, style.css, styleindex.css, logo.png, icon-192.png, and icon-512.png from the HTML files.
+4) Google login stays signed in
+WHITE_QUIZXYZ uses browserLocalPersistence, so the Firebase session remains
+across refreshes and page navigation on the same browser/device. The app does
+not automatically sign the user out. Only the Sign out button signs out.
+
+5) Automatic account sync
+After Google sign-in, the app loads that account's decks from Realtime Database.
+Adding, deleting, shuffling, importing, and changing decks updates the signed-in
+Google account. A local per-user cache is also kept for faster loading/offline use.
+
+6) Legacy migration
+If the older build has cards in localStorage under quizData and the signed-in
+Google account has no decks yet, the cards are migrated once into a deck named
+"Imported from v2.0".
+
+7) Shared link flow
+Use "Save & Share Current Deck". The generated link is copied to clipboard.
+A person can paste the link into "Open a shared link". The app shows the deck,
+cards, Google display name, and a privacy-friendly masked email. Signed-in users
+can import the shared cards into a new personal deck.
+
+8) PWA
+Keep manifest.json, sw.js, icons, HTML/CSS/JS in the same GitHub Pages directory.
+Use HTTPS. On Android/Chrome, Settings -> Install App uses the native install
+prompt when available. On iPhone/iPad, use Share -> Add to Home Screen.
+
+
+SETTINGS + CHAT
+- Settings opens as a right-side drawer on mobile.
+- Sign in/out is controlled from the account card at the top of Settings.
+- Profile -> set a unique username.
+- Chats -> search username, open conversation, send messages, and pin chats.

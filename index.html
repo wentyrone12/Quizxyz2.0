@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WHITE_QUIZXYZ 2.0</title>
+  <title>WHITE_QUIZXYZ 2.2</title>
   <link rel="icon" href="logo.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#070709">
@@ -24,16 +24,27 @@
       <span class="brand">WHITE<span class="brand-accent">_QUIZXYZ</span></span>
     </div>
     <div class="nav-right">
-      <button id="settingsBtn" class="icon-btn" onclick="toggleSettings()">⚙️</button>
       <button id="themeToggle" class="icon-btn" onclick="toggleTheme()">🌙</button>
+      <button id="settingsBtn" class="icon-btn" onclick="toggleSettings()">⚙️</button>
     </div>
   </nav>
-  <div id="settingsCard" class="overlay hidden">
-    <div class="overlay-card glass">
-      <div class="overlay-header">
-        <h3>Settings</h3><button class="close-btn" onclick="toggleSettings()">✕</button>
+  <div id="settingsCard" class="overlay settings-drawer hidden" aria-hidden="true">
+    <div class="settings-backdrop" onclick="toggleSettings()"></div>
+    <aside class="overlay-card glass settings-drawer-card" role="dialog" aria-label="Settings">
+      <div class="overlay-header settings-header">
+        <div><span class="mini-label">ACCOUNT & APP</span>
+          <h3>Settings</h3>
+        </div><button class="close-btn" onclick="toggleSettings()">✕</button>
       </div>
-      <div class="overlay-body">
+      <div class="overlay-body settings-body">
+        <div id="settingsAccount" class="settings-account-card"></div>
+        <button class="settings-menu-button" type="button" onclick="openProfile()"><span
+            class="menu-icon">👤</span><span><strong>Profile</strong><small>Username, bio & account
+              details</small></span></button>
+        <button class="settings-menu-button" type="button" onclick="openChat()"><span
+            class="menu-icon">💬</span><span><strong>Chats</strong><small>Message your WHITEQUIZ
+              friends</small></span><span id="chatBadge" class="chat-badge hidden">0</span></button>
+        <div class="settings-divider"></div>
         <div class="menu-item" onclick="openAbout()"><span class="menu-icon">ℹ️</span>
           <div><strong>About</strong>
             <p>WHITE mission</p>
@@ -44,18 +55,76 @@
             <p>Legacy version</p>
           </div>
         </a>
-        <div class="menu-item install-menu-item" data-install-app onclick="installApp()">
-          <span class="menu-icon">📲</span>
+        <div class="menu-item install-menu-item" data-install-app onclick="installApp()"><span
+            class="menu-icon">📲</span>
           <div><strong>Install App</strong>
             <p>Add WHITE_QUIZXYZ to your home screen</p>
           </div>
         </div>
-        <div class="auth-mini-row">
-          <span>🔐</span>
-          <div>Google login protects the Add New Card area.</div>
+        <div class="auth-mini-row"><span>🔐</span>
+          <div>Your decks and chats are tied to the signed-in Google account. Sign out only when you choose to.</div>
         </div>
       </div>
-    </div>
+    </aside>
+  </div>
+
+  <div id="profileCard" class="overlay settings-drawer hidden" aria-hidden="true">
+    <div class="settings-backdrop" onclick="closeProfile()"></div>
+    <aside class="overlay-card glass settings-drawer-card profile-drawer-card">
+      <div class="overlay-header settings-header">
+        <div><span class="mini-label">YOUR PROFILE</span>
+          <h3>Profile</h3>
+        </div><button class="close-btn" onclick="closeProfile()">✕</button>
+      </div>
+      <div class="overlay-body settings-body">
+        <div id="profileIdentity" class="profile-identity"></div>
+        <div class="profile-form">
+          <div class="input-group"><label>Username</label><input id="username" type="text" maxlength="24"
+              autocomplete="off" placeholder="Choose a username"></div>
+          <div class="input-group"><label>Email</label><input id="email" type="email" readonly></div>
+          <div class="input-group"><label>Bio</label><textarea id="bio" maxlength="160" rows="4"
+              placeholder="Tell your study friends a little about you…"></textarea></div>
+          <p class="profile-hint">Your username is how other WHITEQUIZ users can find you in Chat.</p><button
+            class="btn-primary btn-full" type="button" onclick="saveProfile()">Save Profile</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="chatCard" class="overlay settings-drawer hidden" aria-hidden="true">
+    <div class="settings-backdrop" onclick="closeChat()"></div>
+    <aside class="overlay-card glass settings-drawer-card chat-drawer-card">
+      <div class="chat-shell">
+        <div class="chat-list-panel">
+          <div class="chat-panel-header">
+            <div><span class="mini-label">WHITEQUIZ CHAT</span>
+              <h3>Messages</h3>
+            </div><button class="close-btn" onclick="closeChat()">✕</button>
+          </div>
+          <div class="chat-search-wrap"><span class="chat-search-icon">⌕</span><input id="chatUserSearch" type="search"
+              autocomplete="off" placeholder="Search username…" oninput="searchChatUsers()"></div>
+          <div id="chatSearchResults" class="chat-search-results"></div>
+          <div class="chat-list-title">Your chats</div>
+          <div id="chatList" class="chat-list"></div>
+        </div>
+        <div class="conversation-panel">
+          <div id="conversationEmpty" class="conversation-empty">
+            <div class="chat-empty-icon">💬</div><strong>Choose a conversation</strong><span>Search a username above or
+              open one of your recent chats.</span>
+          </div>
+          <div id="conversationView" class="hidden conversation-view">
+            <div class="conversation-header"><button class="conversation-back-btn"
+                onclick="showChatListMobile()">‹</button>
+              <div id="conversationUser" class="conversation-user"></div>
+            </div>
+            <div id="messagesList" class="messages-list"></div>
+            <form class="message-composer" onsubmit="sendChatMessage(event)"><input id="messageInput" type="text"
+                maxlength="1000" autocomplete="off" placeholder="Type a message…"><button class="send-message-btn"
+                type="submit">➤</button></form>
+          </div>
+        </div>
+      </div>
+    </aside>
   </div>
   <div id="aboutadminCard" class="overlay hidden">
     <div class="overlay-card glass about-card">
@@ -65,7 +134,7 @@
       </div>
       <div class="overlay-body">
         <img src="logo.png" class="about-logo" alt="logo">
-        <h2>WHITE_QUIZXYZ 2.0</h2>
+        <h2 class="taglogo">WHITE_QUIZXYZ 2.0</h2>
         <p class="about-text"><strong>WHITE</strong> = Wendell Highly Intelligent Thinking Excellence — discipline,
           growth, continuous learning. Smart flashcard system for memory & focus.</p>
         <button class="btn-primary" onclick="document.getElementById('aboutadminCard').classList.add('hidden')">⬅
@@ -121,47 +190,92 @@
   </div>
   <main class="container">
     <section class="hero">
-      <div class="hero-badge">✦ v2.0 • Smart Learning</div>
-      <h1>Expect the,<br><span class="gradient-text">Unexpected.</span></h1>
-      <p class="hero-sub">Create, review, and share the flashcards.</p>
+      <div class="hero-badge">✦ v2.0 • Smart Learning • Cloud Sync</div>
+      <h1>Stop waiting for the perfect time.<br><span class="gradient-text">You will die waiting.</span></h1>
+      <p class="hero-sub">Create flashcards, separate subjects into decks, sync them to Google, and share study sets
+        with friends.</p>
     </section>
+
     <section class="main-grid">
-      <div id="addCardPanel" class="card glass form-card">
-        <div id="authUserBox" class="auth-user-box hidden"></div>
-        <div class="card-header">
-          <h2>Add New Card</h2><span class="card-sub">Question front, answer back</span>
+      <div>
+        <div id="addCardPanel" class="card glass form-card">
+          <div class="card-header">
+            <div>
+              <div class="mini-label">CURRENT DECK</div>
+              <h2 id="currentDeckName">No deck</h2>
+              <span id="currentDeckCount" class="card-sub">0 cards</span>
+            </div>
+            <span class="deck-live-badge">● SYNCED</span>
+          </div>
+          <div class="form">
+            <div class="input-group"><label>Question</label><input type="text" id="question"
+                placeholder="e.g., What is CSU?"></div>
+            <div class="input-group"><label>Answer</label><input type="text" id="answer"
+                placeholder="e.g., Cotabato State University"></div>
+            <button class="btn-primary btn-full" onclick="addQuestion()">+ Add Flashcard</button>
+          </div>
+          <div id="syncStatus" class="sync-status hidden" aria-live="polite"></div>
         </div>
-        <div class="form">
-          <div class="input-group"><label>Question</label><input type="text" id="question"
-              placeholder="e.g., What is CSU??"></div>
-          <div class="input-group"><label>Answer</label><input type="text" id="answer"
-              placeholder="e.g., Cotabato State University"></div>
-          <button class="btn-primary btn-full" onclick="addQuestion()">+ Add Flashcard</button>
+
+        <div class="card glass share-import-card">
+          <div class="section-head">
+            <div>
+              <span class="mini-label">SHARED STUDY SET</span>
+              <h3>Open a shared link</h3>
+            </div>
+            <span class="section-icon">🔗</span>
+          </div>
+          <div class="shared-input-row">
+            <input type="text" id="sharedLinkInput" placeholder="Paste share link here…" autocomplete="off">
+            <button id="loadSharedBtn" class="btn-secondary" onclick="loadSharedQuiz()">Load Shared Deck</button>
+          </div>
+          <div id="sharedPreview" class="shared-preview hidden"></div>
         </div>
       </div>
+
       <div class="side-stack">
+        <div class="card glass deck-manager-card">
+          <div class="section-head">
+            <div>
+              <span class="mini-label">YOUR SUBJECTS</span>
+              <h3>Decks</h3>
+            </div>
+            <span class="section-icon">🗂️</span>
+          </div>
+          <div class="deck-select-row">
+            <select id="deckSelect" onchange="handleDeckSelect(event)"></select>
+          </div>
+          <div class="new-deck-row">
+            <input id="newDeckName" type="text" maxlength="80" placeholder="New deck name (e.g. English)">
+            <button class="btn-secondary" onclick="createDeck()">＋ Add Deck</button>
+          </div>
+          <div id="deckList" class="deck-list"></div>
+        </div>
+
         <div class="card glass stats-card">
-          <div class="stat"><span class="stat-num" id="statCount">0</span><span class="stat-label">Total Cards</span>
+          <div class="stat"><span class="stat-num" id="statCount">0</span><span class="stat-label">Cards</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num" id="statDeckCount">0</span><span class="stat-label">Decks</span>
           </div>
           <div class="stat-divider"></div>
-          <div class="stat"><span class="stat-num">∞</span><span class="stat-label">Sharable</span></div>
+          <div class="stat"><span class="stat-num">∞</span><span class="stat-label">Share</span></div>
         </div>
+
         <div class="card glass action-card">
           <h3>Ready to study?</h3>
-          <p>Tap to flip, swipe to navigate on mobile.</p>
+          <p id="studyHint">Open the current deck in flashcard mode, then use Multiple Choice from the menu.</p>
           <div class="action-buttons">
             <a href="btn-flashcard.html" class="btn-primary btn-full"
               style="text-decoration:none;text-align:center;display:block;">📚 Open Flashcards</a>
-            <button class="btn-secondary btn-full" onclick="saveQuizOnline()">🔗 Save & Share</button>
+            <button class="btn-secondary btn-full" onclick="saveQuizOnline()">🔗 Save & Share Current Deck</button>
           </div>
         </div>
       </div>
     </section>
-    <footer class="footer">Made by <strong style="color: red;">Wenxyz</strong> <a style="color: yellowgreen;"> •
-        WHITE_QUIZXYZ 2.0</a></footer>
+
+    <footer class="footer">Made by <strong style="color: red;">Wenxyz</strong> </footer>
   </main>
   <script type="module" src="script.js"></script>
-  <script>function updateStat() { try { const d = JSON.parse(localStorage.getItem('quizData') || '[]'); const el = document.getElementById('statCount'); if (el) el.textContent = d.length; } catch (e) { } } setInterval(updateStat, 500); updateStat();</script>
 </body>
 
 </html>

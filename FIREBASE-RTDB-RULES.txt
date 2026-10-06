@@ -1,21 +1,37 @@
-WHITE_QUIZXYZ - Realtime Database Rules
-
-Paste these under Firebase Console > Realtime Database > Rules.
-These rules let each signed-in Google user write/read only their own user profile and login history.
-You (the Firebase project owner) can still inspect all records from the Firebase Console.
+WHITE_QUIZXYZ 2.2 - Realtime Database Rules
 
 {
   "rules": {
+    ".read": false,
+    ".write": false,
     "users": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
-      }
+      "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" }
     },
     "loginHistory": {
+      "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" }
+    },
+    "userDirectory": {
+      ".read": "auth != null",
+      ".indexOn": ["usernameLower"],
+      "$uid": { ".write": "auth != null && auth.uid === $uid" }
+    },
+    "userChats": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
+        "$otherUid": {
+          ".write": "auth != null && (auth.uid === $uid || (auth.uid === $otherUid && newData.child('otherUid').val() === auth.uid && root.child('conversations').child(newData.child('conversationId').val()).child('members').child(auth.uid).exists()))"
+        }
+      }
+    },
+    "conversations": {
+      "$cid": {
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        ".write": "auth != null && ((data.exists() && data.child('members').child(auth.uid).exists()) || (!data.exists() && newData.child('members').child(auth.uid).exists()))",
+        "messages": {
+          "$mid": {
+            ".validate": "auth != null && root.child('conversations').child($cid).child('members').child(auth.uid).exists() && newData.child('senderUid').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 1000"
+          }
+        }
       }
     }
   }
