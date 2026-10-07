@@ -1,10 +1,7 @@
-WHITE_QUIZXYZ 2.0 - Firestore Rules for Share Links
+WHITE_QUIZXYZ 2.3 - Firestore Rules
 
-Paste these under Firebase Console > Firestore Database > Rules.
-
-Anyone can READ a shared quiz by link. Only a signed-in user can CREATE a
-shared quiz, and the creator must set ownerUid to their own Firebase UID.
-Updates and deletes are disabled from the client.
+Paste into Firebase Console > Firestore Database > Rules.
+The /quizzes collection is public-read for shared decks. The /mail collection is a protected write queue for Firebase Trigger Email (configure the extension separately).
 
 rules_version = '2';
 service cloud.firestore {
@@ -14,6 +11,13 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.ownerUid == request.auth.uid;
       allow update, delete: if false;
+    }
+
+    match /mail/{mailId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.to == request.auth.token.email;
+      allow read, update, delete: if false;
     }
   }
 }

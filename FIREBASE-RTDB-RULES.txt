@@ -1,4 +1,4 @@
-WHITE_QUIZXYZ 2.2 - Realtime Database Rules
+
 
 {
   "rules": {
@@ -15,6 +15,11 @@ WHITE_QUIZXYZ 2.2 - Realtime Database Rules
       ".indexOn": ["usernameLower"],
       "$uid": { ".write": "auth != null && auth.uid === $uid" }
     },
+    "searchDirectory": {
+      ".read": "auth != null",
+      ".indexOn": ["usernameLower"],
+      "$uid": { ".write": "auth != null && auth.uid === $uid" }
+    },
     "userChats": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
@@ -25,11 +30,12 @@ WHITE_QUIZXYZ 2.2 - Realtime Database Rules
     },
     "conversations": {
       "$cid": {
-        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
-        ".write": "auth != null && ((data.exists() && data.child('members').child(auth.uid).exists()) || (!data.exists() && newData.child('members').child(auth.uid).exists()))",
+        ".read": "auth != null && (!data.exists() || data.child('members').child(auth.uid).exists())",
+        ".write": "auth != null && !data.exists() && newData.child('members').child(auth.uid).exists()",
         "messages": {
           "$mid": {
-            ".validate": "auth != null && root.child('conversations').child($cid).child('members').child(auth.uid).exists() && newData.child('senderUid').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 1000"
+            ".write": "auth != null && root.child('conversations').child($cid).child('members').child(auth.uid).exists() && ((!data.exists() && newData.exists() && newData.child('senderUid').val() === auth.uid) || (data.exists() && data.child('senderUid').val() === auth.uid) || (data.exists() && newData.exists() && newData.child('senderUid').val() === data.child('senderUid').val() && newData.child('text').val() === data.child('text').val() && newData.child('deleted').val() === data.child('deleted').val() && newData.child('editedAt').val() === data.child('editedAt').val())))",
+            ".validate": "auth != null && root.child('conversations').child($cid).child('members').child(auth.uid).exists() && newData.child('senderUid').isString() && newData.child('text').isString() && newData.child('text').val().length <= 1000 && newData.child('text').val().length >= 0 && (data.exists() ? newData.child('senderUid').val() === data.child('senderUid').val() : newData.child('senderUid').val() === auth.uid)"
           }
         }
       }

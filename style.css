@@ -192,9 +192,6 @@ body.light-mode .navbar {
     background: var(--secondary);
     cursor: pointer
 }
-.empty-card-state{
-    text-align: center;
-}
 
 .menu-icon {
     width: 44px;

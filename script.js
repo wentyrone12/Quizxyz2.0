@@ -25,7 +25,8 @@ import {
   orderByChild,
   startAt,
   endAt,
-  equalTo
+  equalTo,
+  onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -64,6 +65,9 @@ let stopDeckListener = null;
 let legacyMigrationDone = false;
 let sharedQuizCache = null;
 let profileData = null, chatUsers = {}, activeChatUid = null, stopChatListListener = null, stopMessagesListener = null;
+let privacyData = { searchable: true, showActiveStatus: true, showEmail: true, showDeckCount: true, allowMessages: true };
+let activeDirectoryRef = null;
+let presenceOnline = false;
 
 const USER_CACHE_PREFIX = "whitequiz-user-cache-v2-";
 const ACTIVE_DECK_PREFIX = "whitequiz-active-deck-v2-";
@@ -270,7 +274,10 @@ window.logoutGoogle = async function () {
 
 async function recordLogin(user) {
   try {
-    await update(ref(rtdb, `users/${user.uid}`), {
+    const userRef = ref(rtdb, `users/${user.uid}`);
+    const existing = await get(userRef);
+    const firstLogin = !existing.exists() || !existing.child("welcomeEmailQueued").exists();
+    await update(userRef, {
       uid: user.uid,
       name: user.displayName || "Google User",
       email: user.email || "",
@@ -285,8 +292,31 @@ async function recordLogin(user) {
       loginAt: serverTimestamp(),
       userAgent: navigator.userAgent
     });
+    return firstLogin;
   } catch (error) {
     console.error("Failed to record login:", error);
+    return false;
+  }
+}
+
+async function queueWelcomeEmail(user) {
+  if (!user?.email) return;
+  try {
+    await addDoc(collection(db, "mail"), {
+      uid: user.uid,
+      to: user.email,
+      message: {
+        subject: "Welcome to WHITE_QUIZXYZ 👋",
+        text: `Hi ${user.displayName || "there"}! Welcome to WHITE_QUIZXYZ. Your decks and chats are ready to sync with your Google account.`,
+        html: `<div style="font-family:Arial,sans-serif;line-height:1.6"><h2>Welcome to WHITE_QUIZXYZ 👋</h2><p>Hi ${escapeHTML(user.displayName || "there")}!</p><p>Your account is ready. Your flashcard decks can sync with your Google account, and you can use WHITEQUIZ Chat to message other learners.</p><p>Study smart. Keep growing. — WHITE</p></div>`
+      },
+      queuedAt: firestoreServerTimestamp()
+    });
+    await update(ref(rtdb, `users/${user.uid}`), { welcomeEmailQueued: serverTimestamp() });
+    showChatToast("👋 Welcome! A welcome email has been queued to your Gmail.", "success");
+  } catch (error) {
+    console.warn("Welcome email queue unavailable:", error);
+    showChatToast(`👋 Welcome to WHITE_QUIZXYZ, ${user.displayName || "friend"}!`, "success");
   }
 }
 
@@ -369,6 +399,7 @@ function subscribeToDecks(user) {
       firstSnapshot = false;
       decksLoaded = true;
       await ensureDecksForUser(user);
+      syncDirectoryProfile().catch(()=>{});
     }
   }, (error) => {
     console.error("Deck sync listener failed:", error);
@@ -386,6 +417,8 @@ async function initAuth() {
   onAuthStateChanged(auth, async (user) => {
     currentUser = user || null;
     if (!user) {
+      presenceOnline = false;
+      if (activeDirectoryRef) { update(activeDirectoryRef, { active: false, activeAt: Date.now() }).catch(()=>{}); }
       if (stopDeckListener) {
         stopDeckListener();
         stopDeckListener = null;
@@ -407,7 +440,8 @@ async function initAuth() {
 
     updateAuthUI(user);
     showSyncStatus("Connecting your Google account…");
-    await recordLogin(user);
+    const firstLogin = await recordLogin(user);
+    if (firstLogin && isHomePage()) await queueWelcomeEmail(user);
     await ensureUserProfile(user);
     subscribeToDecks(user);
     subscribeToChatList(user);
@@ -440,6 +474,7 @@ async function saveDeckToCloud(deckId = activeDeckId) {
       updatedAt: serverTimestamp()
     });
     showSyncStatus("Saved to your Google account", false, 1800);
+    syncDirectoryProfile().catch(()=>{});
     return true;
   } catch (error) {
     console.error("Cloud save failed:", error);
@@ -570,9 +605,13 @@ window.deleteDeck = async function (id, event) {
     setQuizFromActiveDeck();
   }
   renderDecksUI();
+  syncDirectoryProfile().catch(()=>{});
   if (document.getElementById("cardContainer")) showReviewer();
 };
 
+// -----------------------------
+// CARDS
+// -----------------------------
 window.addQuestion = async function () {
   if (!currentUser) {
     openMandatoryAuth();
@@ -656,6 +695,9 @@ window.shuffleCards = async function () {
   alert("🔀 Cards shuffled and synced.");
 };
 
+// -----------------------------
+// PUBLIC SHARE + IMPORT
+// -----------------------------
 window.saveQuizOnline = async function () {
   if (!currentUser) return openMandatoryAuth();
   if (!getActiveDeck()) return alert("Create or select a deck first.");
@@ -812,7 +854,7 @@ function renderCard() {
 
   container.innerHTML = "";
   if (quiz.length === 0) {
-    container.innerHTML = `<div class="empty-card-state"><div class="empty-icon"></div><strong>No flashcards in this deck yet.</strong><br><span>Add cards from Home to start studying.</span></div>`;
+    container.innerHTML = `<div class="empty-card-state"><div class="empty-icon">📚</div><strong>No flashcards in this deck yet.</strong><span>Add cards from Home to start studying.</span></div>`;
     counter.innerText = "0 / 0";
     return;
   }
@@ -1017,15 +1059,98 @@ function renderQA() {
 function slugifyUsername(value) { return String(value||"").toLowerCase().trim().replace(/[^a-z0-9_]+/g,"").slice(0,24); }
 function makeDefaultUsername(user) { const base=slugifyUsername(user.displayName || user.email?.split("@")[0] || "student") || "student"; return `${base}${String(user.uid).slice(-4).toLowerCase()}`.slice(0,24); }
 
+function normalizePrivacy(raw = {}) {
+  return {
+    searchable: raw.searchable !== false,
+    showActiveStatus: raw.showActiveStatus !== false,
+    showEmail: raw.showEmail !== false,
+    showDeckCount: raw.showDeckCount !== false,
+    allowMessages: raw.allowMessages !== false
+  };
+}
+
+function publicDirectoryRecord(user, profile = profileData, privacy = privacyData) {
+  const p = profile || {};
+  const pr = normalizePrivacy(privacy);
+  return {
+    uid: user.uid,
+    username: p.username || makeDefaultUsername(user),
+    usernameLower: String(p.username || makeDefaultUsername(user)).toLowerCase(),
+    displayName: user.displayName || "Google User",
+    emailMasked: pr.showEmail ? maskEmail(user.email || "") : "",
+    photoURL: user.photoURL || "",
+    bio: String(p.bio || "").slice(0,160),
+    deckCount: pr.showDeckCount ? Object.keys(decks || {}).length : null,
+    active: pr.showActiveStatus ? !!presenceOnline : false,
+    showActiveStatus: pr.showActiveStatus,
+    showDeckCount: pr.showDeckCount,
+    allowMessages: pr.allowMessages,
+    searchable: pr.searchable,
+    activeAt: pr.showActiveStatus && presenceOnline ? Date.now() : null,
+    updatedAt: serverTimestamp()
+  };
+}
+
+async function syncDirectoryProfile({ presenceOnly = false } = {}) {
+  if (!currentUser) return;
+  const record = publicDirectoryRecord(currentUser, profileData, privacyData);
+  if (presenceOnly) {
+    await update(ref(rtdb, `userDirectory/${currentUser.uid}`), { active: record.active, activeAt: record.activeAt, showActiveStatus: record.showActiveStatus });
+    if (privacyData.searchable) await update(ref(rtdb, `searchDirectory/${currentUser.uid}`), { active: record.active, activeAt: record.activeAt, showActiveStatus: record.showActiveStatus });
+    return;
+  }
+  await update(ref(rtdb, `userDirectory/${currentUser.uid}`), record);
+  if (privacyData.searchable) await update(ref(rtdb, `searchDirectory/${currentUser.uid}`), record);
+  else await remove(ref(rtdb, `searchDirectory/${currentUser.uid}`));
+}
+
+async function setPresence(user, online) {
+  if (!user) return;
+  presenceOnline = !!online;
+  const recordRef = ref(rtdb, `userDirectory/${user.uid}`);
+  activeDirectoryRef = recordRef;
+  try {
+    if (online) {
+      await update(recordRef, { active: privacyData.showActiveStatus, activeAt: privacyData.showActiveStatus ? Date.now() : null });
+      onDisconnect(recordRef).update({ active: false, activeAt: null });
+      const searchPresence = onDisconnect(ref(rtdb, `searchDirectory/${user.uid}`));
+      if (privacyData.searchable) {
+        await update(ref(rtdb, `searchDirectory/${user.uid}`), { active: privacyData.showActiveStatus, activeAt: privacyData.showActiveStatus ? Date.now() : null });
+        searchPresence.update({ active: false, activeAt: null });
+      } else {
+        searchPresence.cancel().catch(()=>{});
+      }
+    } else {
+      await update(recordRef, { active: false, activeAt: Date.now() });
+      await update(ref(rtdb, `searchDirectory/${user.uid}`), { active: false, activeAt: Date.now() }).catch(()=>{});
+    }
+  } catch (e) { console.warn("Presence update failed", e); }
+}
+
+function profileDeckCountText(target) {
+  if (target?.showDeckCount === false) return "Hidden";
+  const n = Number(target.deckCount || 0);
+  return `${n} deck${n === 1 ? "" : "s"}`;
+}
+
+function profileActiveText(target) {
+  if (target?.showActiveStatus === false) return "Active status hidden";
+  return target.active ? "Active now" : "Offline";
+}
+
 async function ensureUserProfile(user) {
   if (!user) return;
   try {
     const snap=await get(ref(rtdb,`users/${user.uid}/profile`));
     if(snap.exists()) profileData=snap.val()||{};
     else { profileData={username:makeDefaultUsername(user),bio:"",createdAt:Date.now(),updatedAt:Date.now()}; await set(ref(rtdb,`users/${user.uid}/profile`),profileData); }
-    const p=profileData||{}; const username=p.username||makeDefaultUsername(user);
-    await update(ref(rtdb,`userDirectory/${user.uid}`),{uid:user.uid,username,usernameLower:username.toLowerCase(),displayName:user.displayName||"Google User",emailMasked:maskEmail(user.email||""),photoURL:user.photoURL||"",bio:p.bio||"",updatedAt:serverTimestamp()});
+    privacyData=normalizePrivacy(profileData.privacy);
+    profileData={...(profileData||{}),privacy:privacyData};
+    await update(ref(rtdb,`users/${user.uid}/profile`),{privacy:privacyData});
+    await syncDirectoryProfile();
+    await setPresence(user, true);
     fillProfileUI();
+    fillPrivacyUI();
   }catch(e){console.error("Profile bootstrap failed",e);}
 }
 
@@ -1037,6 +1162,48 @@ function fillProfileUI(){
 }
 window.openProfile=function(){ if(!currentUser)return openMandatoryAuth(); document.getElementById("settingsCard")?.classList.add("hidden"); document.getElementById("profileCard")?.classList.remove("hidden"); fillProfileUI(); };
 window.closeProfile=function(){ document.getElementById("profileCard")?.classList.add("hidden"); };
+
+function fillPrivacyUI(){
+  const map={
+    privacySearchable:privacyData.searchable,
+    privacyActiveStatus:privacyData.showActiveStatus,
+    privacyShowEmail:privacyData.showEmail,
+    privacyShowDeckCount:privacyData.showDeckCount,
+    privacyAllowMessages:privacyData.allowMessages
+  };
+  Object.entries(map).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.checked=!!val;});
+}
+
+window.openPrivacySettings=function(){
+  if(!currentUser)return openMandatoryAuth();
+  document.getElementById("settingsCard")?.classList.add("hidden");
+  fillPrivacyUI();
+  document.getElementById("privacyCard")?.classList.remove("hidden");
+};
+window.closePrivacySettings=function(){document.getElementById("privacyCard")?.classList.add("hidden");};
+window.savePrivacySettings=async function(){
+  if(!currentUser)return openMandatoryAuth();
+  const next=normalizePrivacy({
+    searchable:document.getElementById("privacySearchable")?.checked,
+    showActiveStatus:document.getElementById("privacyActiveStatus")?.checked,
+    showEmail:document.getElementById("privacyShowEmail")?.checked,
+    showDeckCount:document.getElementById("privacyShowDeckCount")?.checked,
+    allowMessages:document.getElementById("privacyAllowMessages")?.checked
+  });
+  try{
+    privacyData=next;
+    profileData={...(profileData||{}),privacy:privacyData,updatedAt:Date.now()};
+    await update(ref(rtdb,`users/${currentUser.uid}/profile`),{privacy:privacyData,updatedAt:Date.now()});
+    await syncDirectoryProfile();
+    await setPresence(currentUser,true);
+    closePrivacySettings();
+    showChatToast("🛡️ Privacy settings saved.","success");
+  }catch(e){
+    console.error(e);
+    showChatToast("Could not save privacy settings. Check Firebase rules.","error");
+  }
+};
+
 window.saveProfile=async function(){
   if(!currentUser)return openMandatoryAuth();
   const raw=slugifyUsername(document.getElementById("username")?.value||""); const bio=String(document.getElementById("bio")?.value||"").trim().slice(0,160);
@@ -1044,10 +1211,11 @@ window.saveProfile=async function(){
   try{
     const snap=await get(query(ref(rtdb,"userDirectory"),orderByChild("usernameLower"),equalTo(raw)));
     let taken=false; snap.forEach(x=>{if(x.key!==currentUser.uid)taken=true;}); if(taken)return alert("That username is already taken.");
-    profileData={...(profileData||{}),username:raw,bio,updatedAt:Date.now()};
+    profileData={...(profileData||{}),username:raw,bio,privacy:privacyData,updatedAt:Date.now()};
     await update(ref(rtdb,`users/${currentUser.uid}/profile`),profileData);
-    await update(ref(rtdb,`userDirectory/${currentUser.uid}`),{uid:currentUser.uid,username:raw,usernameLower:raw,displayName:currentUser.displayName||"Google User",emailMasked:maskEmail(currentUser.email||""),photoURL:currentUser.photoURL||"",bio,updatedAt:serverTimestamp()});
-    fillProfileUI(); renderChatList(); alert("✅ Profile saved!");
+    await syncDirectoryProfile();
+    await setPresence(currentUser, true);
+    fillProfileUI(); renderChatList(); showChatToast("✅ Profile saved.","success");
   }catch(e){console.error(e);alert("Could not save your profile. Check Firebase Realtime Database rules.");}
 };
 
@@ -1087,27 +1255,338 @@ window.openAbout = function () {
 // CHAT
 // -----------------------------
 function conversationId(a,b){return [String(a),String(b)].sort().join("__");}
-function normalizeChatMeta(v={},fallback=""){return {otherUid:String(v.otherUid||fallback),conversationId:String(v.conversationId||""),username:String(v.username||"user"),displayName:String(v.displayName||"User"),photoURL:String(v.photoURL||"logo.png"),lastMessage:String(v.lastMessage||""),lastMessageAt:Number(v.lastMessageAt||0),pinned:!!v.pinned,unread:Number(v.unread||0)};}
-function renderChatList(){
-  const el=document.getElementById("chatList");if(!el)return; const rows=Object.values(chatUsers).map(normalizeChatMeta).sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||(b.lastMessageAt-a.lastMessageAt));
-  el.innerHTML=rows.length?rows.map(c=>`<div class="chat-user-row ${activeChatUid===c.otherUid?'active':''}" onclick="openConversation('${escapeAttribute(c.otherUid)}')"><img class="chat-user-avatar" src="${escapeAttribute(c.photoURL)}" alt=""><span class="chat-user-copy"><strong>@${escapeHTML(c.username)}</strong><small>${escapeHTML(c.lastMessage||'Start a conversation')}</small></span><span class="chat-row-actions"><button class="pin-chat-btn ${c.pinned?'pinned':''}" type="button" onclick="togglePinnedChat(event,'${escapeAttribute(c.otherUid)}')">${c.pinned?'📌':'📍'}</button></span></div>`).join(""): '<div class="chat-empty-list">No conversations yet.<br>Search a username above to start one.</div>';
-  const unread=rows.reduce((n,c)=>n+Math.max(0,c.unread),0), badge=document.getElementById("chatBadge"); if(badge){badge.textContent=unread>99?'99+':unread;badge.classList.toggle('hidden',!unread);}
+function normalizeChatMeta(v={},fallback=""){
+  return {
+    otherUid:String(v.otherUid||fallback),
+    conversationId:String(v.conversationId||""),
+    username:String(v.username||"user"),
+    displayName:String(v.displayName||"User"),
+    photoURL:String(v.photoURL||"logo.png"),
+    lastMessage:String(v.lastMessage||""),
+    lastMessageAt:Number(v.lastMessageAt||0),
+    pinned:!!v.pinned,
+    locked:!!v.locked,
+    pinHash:String(v.pinHash||""),
+    unread:Number(v.unread||0),
+    lastMessageReadAt:Number(v.lastMessageReadAt||0)
+  };
 }
-function subscribeToChatList(user){if(stopChatListListener)stopChatListListener();stopChatListListener=onValue(ref(rtdb,`userChats/${user.uid}`),snap=>{const raw=snap.val()||{};chatUsers=Object.fromEntries(Object.entries(raw).map(([k,v])=>[k,normalizeChatMeta(v,k)]));renderChatList();});}
-async function getDirectoryUser(uid){const s=await get(ref(rtdb,`userDirectory/${uid}`));return s.exists()?s.val():null;}
-async function ensureConversation(target){const cid=conversationId(currentUser.uid,target.uid), rr=ref(rtdb,`conversations/${cid}`), s=await get(rr);if(!s.exists())await update(rr,{members:{[currentUser.uid]:true,[target.uid]:true},createdAt:serverTimestamp()});return cid;}
-window.openChat=async function(){if(!currentUser)return openMandatoryAuth();document.getElementById("settingsCard")?.classList.add("hidden");document.getElementById("chatCard")?.classList.remove("hidden");renderChatList();document.getElementById("chatUserSearch")?.focus();};
-window.closeChat=function(){document.getElementById("chatCard")?.classList.add("hidden");document.getElementById("chatCard")?.classList.remove("chat-conversation-open");activeChatUid=null;if(stopMessagesListener){stopMessagesListener();stopMessagesListener=null;}};
-window.showChatListMobile=function(){document.getElementById("chatCard")?.classList.remove("chat-conversation-open");};
-window.searchChatUsers=async function(){
-  if(!currentUser)return;const term=slugifyUsername(document.getElementById("chatUserSearch")?.value||"");const out=document.getElementById("chatSearchResults");if(!out)return;if(term.length<2){out.innerHTML="";return;}out.innerHTML='<div class="chat-search-empty">Searching…</div>';
-  try{const snap=await get(query(ref(rtdb,"userDirectory"),orderByChild("usernameLower"),startAt(term),endAt(term+"\uf8ff")));const a=[];snap.forEach(x=>{if(x.key!==currentUser.uid)a.push(x.val());});out.innerHTML=a.slice(0,12).map(u=>`<button class="chat-user-row chat-search-result" type="button" onclick="startChatWithUser('${escapeAttribute(u.uid)}')"><img class="chat-user-avatar" src="${escapeAttribute(u.photoURL||'logo.png')}" alt=""><span class="chat-user-copy"><strong>@${escapeHTML(u.username||'user')}</strong><small>${escapeHTML(u.displayName||'WHITEQUIZ user')} • ${escapeHTML(u.emailMasked||'')}</small></span></button>`).join("")||'<div class="chat-search-empty">No matching username found.</div>';}catch(e){console.error(e);out.innerHTML='<div class="chat-search-empty">Search unavailable. Check your database rules.</div>';}
+let activeMessages = {};
+let pinModalMode = null;
+let pinModalUid = null;
+let chatToastTimer = null;
+let chatListPrevious = {};
+let lastNotificationAt = {};
+
+function showChatToast(message, kind="info"){
+  const el=document.getElementById("chatToast");
+  if(!el)return;
+  clearTimeout(chatToastTimer);
+  el.className=`chat-toast ${kind}`;
+  el.textContent=message;
+  el.classList.remove("hidden");
+  chatToastTimer=setTimeout(()=>el.classList.add("hidden"),4200);
+}
+
+async function requestChatNotifications(){
+  try{
+    if("Notification" in window && Notification.permission==="default") await Notification.requestPermission();
+  }catch(e){console.warn("Notification permission unavailable",e);}
+}
+
+function notifyIncomingMessage(meta, text, senderName){
+  const uid=meta?.otherUid;
+  const now=Date.now();
+  if(uid && lastNotificationAt[uid] && now-lastNotificationAt[uid]<1200)return;
+  if(uid)lastNotificationAt[uid]=now;
+  const label=senderName || meta?.displayName || meta?.username || "Someone";
+  showChatToast(`💬 ${label}: ${String(text||"New message").slice(0,90)}`,"message");
+  try{
+    if("Notification" in window && Notification.permission==="granted" && document.visibilityState!=="visible"){
+      new Notification(`WHITEQUIZ • ${label}`,{body:String(text||"New message").slice(0,120),icon:"logo.png",tag:`whitequiz-chat-${uid||Date.now()}`});
+    }
+  }catch(e){console.warn("Browser notification failed",e);}
+}
+
+async function sha256(value){
+  const data=new TextEncoder().encode(String(value));
+  const hash=await crypto.subtle.digest("SHA-256",data);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function getPinDigits(){return Array.from(document.querySelectorAll("#pinModal .pin-digit"));}
+function clearPinInputs(){getPinDigits().forEach(i=>i.value="");getPinDigits()[0]?.focus();document.getElementById("pinModalError")?.classList.add("hidden");}
+function pinValue(){return getPinDigits().map(i=>i.value).join("");}
+function openPinModal(mode,uid){
+  pinModalMode=mode; pinModalUid=uid;
+  const modal=document.getElementById("pinModal"), title=document.getElementById("pinModalTitle"), text=document.getElementById("pinModalText"), btn=document.getElementById("pinModalSubmit");
+  if(!modal)return;
+  title.textContent=mode==="set"?"Set Chat PIN":mode==="change"?"Change Chat PIN":mode==="unlockForChange"?"Verify Current PIN":mode==="unlock"?"Unlock Chat":"Chat PIN";
+  text.textContent=mode==="set"?"Create a 6-digit PIN for this private conversation.":mode==="change"?"Create a new 6-digit PIN for this conversation.":mode==="unlockForChange"?"Enter your current PIN before changing it.":"Enter your 6-digit PIN to open this private conversation.";
+  if(btn)btn.textContent=mode==="unlock"||mode==="unlockForChange"?"Unlock":mode==="change"?"Save New PIN":"Save PIN";
+  modal.classList.remove("hidden"); modal.setAttribute("aria-hidden","false"); clearPinInputs();
+}
+window.closePinModal=function(){const modal=document.getElementById("pinModal");modal?.classList.add("hidden");modal?.setAttribute("aria-hidden","true");pinModalMode=null;pinModalUid=null;clearPinInputs();};
+
+async function submitPinModal(){
+  if(!currentUser||!pinModalUid)return;
+  const pin=pinValue();
+  const errorBox=document.getElementById("pinModalError");
+  if(!/^\d{6}$/.test(pin)){if(errorBox){errorBox.textContent="PIN must contain exactly 6 digits.";errorBox.classList.remove("hidden");}return;}
+  try{
+    const meta=normalizeChatMeta(chatUsers[pinModalUid],pinModalUid), cid=meta.conversationId||conversationId(currentUser.uid,pinModalUid);
+    if(pinModalMode==="unlock" || pinModalMode==="unlockForChange"){
+      const hash=await sha256(`${cid}::${pin}`);
+      if(hash!==meta.pinHash){if(errorBox){errorBox.textContent="Incorrect PIN. Try again.";errorBox.classList.remove("hidden");}clearPinInputs();return;}
+      const uid=pinModalUid;
+      const mode=pinModalMode;
+      closePinModal();
+      if(mode==="unlockForChange") openPinModal("change",uid);
+      else await openConversation(uid,true);
+      return;
+    }
+    const hash=await sha256(`${cid}::${pin}`);
+    await update(ref(rtdb,`userChats/${currentUser.uid}/${pinModalUid}`),{locked:true,pinHash:hash});
+    if(pinModalMode==="set")showChatToast("🔒 Chat locked with a PIN.","success"); else showChatToast("🔐 Chat PIN updated.","success");
+    closePinModal();
+    renderChatList();
+  }catch(e){console.error(e);if(errorBox){errorBox.textContent="Could not save the chat PIN. Check Firebase rules.";errorBox.classList.remove("hidden");}}
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll("#pinModal .pin-digit").forEach((input,idx,all)=>{
+    input.addEventListener("input",()=>{input.value=input.value.replace(/\D/g,"").slice(0,1);if(input.value&&all[idx+1])all[idx+1].focus();});
+    input.addEventListener("keydown",e=>{if(e.key==="Backspace"&&!input.value&&all[idx-1]){e.preventDefault();all[idx-1].focus();}});
+    input.addEventListener("paste",e=>{e.preventDefault();const v=(e.clipboardData?.getData("text")||"").replace(/\D/g,"").slice(0,6);v.split("").forEach((d,i)=>{if(all[i])all[i].value=d;});all[Math.min(v.length,5)]?.focus();});
+  });
+  document.getElementById("pinModalSubmit")?.addEventListener("click",submitPinModal);
+  document.addEventListener("click",()=>document.getElementById("chatContextMenu")?.classList.add("hidden"));
+});
+
+function chatMenuPosition(x,y){
+  const menu=document.getElementById("chatContextMenu"); if(!menu)return;
+  menu.style.left="0px";menu.style.top="0px";menu.classList.remove("hidden");
+  const rect=menu.getBoundingClientRect();
+  menu.style.left=`${Math.min(x,window.innerWidth-rect.width-12)}px`;
+  menu.style.top=`${Math.min(y,window.innerHeight-rect.height-12)}px`;
+}
+
+window.showChatActions=function(uid,e){
+  e?.preventDefault();e?.stopPropagation(); if(!uid||!currentUser)return;
+  const meta=normalizeChatMeta(chatUsers[uid],uid), menu=document.getElementById("chatContextMenu"); if(!menu)return;
+  menu.innerHTML=`<button type="button" onclick="togglePinnedChat(event,'${escapeAttribute(uid)}')">${meta.pinned?'📌 Unpin chat':'📌 Pin chat'}</button><button type="button" onclick="${meta.locked?'unlockChatFromMenu':'lockChatFromMenu'}(event,'${escapeAttribute(uid)}')">${meta.locked?'🔓 Unlock chat':'🔒 Lock chat with PIN'}</button>${meta.locked?`<button type="button" onclick="changeChatPin(event,'${escapeAttribute(uid)}')">🔑 Change PIN</button>`:''}<button type="button" class="danger" onclick="deleteChatList(event,'${escapeAttribute(uid)}')">🗑 Delete chat</button>`;
+  chatMenuPosition(e?.clientX||window.innerWidth-240,e?.clientY||120);
 };
-window.startChatWithUser=async function(uid){if(!currentUser||uid===currentUser.uid)return;try{const target=await getDirectoryUser(uid);if(!target)return;const cid=await ensureConversation({uid,...target});const mine=normalizeChatMeta(chatUsers[uid],uid), p=profileData||{};await update(ref(rtdb),{[`userChats/${currentUser.uid}/${uid}`]:{otherUid:uid,conversationId:cid,username:target.username||'user',displayName:target.displayName||'User',photoURL:target.photoURL||'',lastMessage:mine.lastMessage,lastMessageAt:mine.lastMessageAt,pinned:mine.pinned,unread:0,updatedAt:serverTimestamp()},[`userChats/${uid}/${currentUser.uid}`]:{otherUid:currentUser.uid,conversationId:cid,username:p.username||makeDefaultUsername(currentUser),displayName:currentUser.displayName||'Google User',photoURL:currentUser.photoURL||'',lastMessage:mine.lastMessage,lastMessageAt:mine.lastMessageAt,pinned:false,unread:0,updatedAt:serverTimestamp()}});document.getElementById("chatSearchResults").innerHTML="";document.getElementById("chatUserSearch").value="";openConversation(uid);}catch(e){console.error(e);alert("Could not start this conversation. Check Firebase rules.");}};
-window.openConversation=async function(uid){if(!currentUser)return openMandatoryAuth();const target=await getDirectoryUser(uid);if(!target)return;activeChatUid=uid;document.getElementById("chatCard")?.classList.add("chat-conversation-open");document.getElementById("conversationEmpty")?.classList.add("hidden");document.getElementById("conversationView")?.classList.remove("hidden");const u=document.getElementById("conversationUser");if(u)u.innerHTML=`<img src="${escapeAttribute(target.photoURL||'logo.png')}" alt=""><div><strong>@${escapeHTML(target.username||'user')}</strong><span>${escapeHTML(target.displayName||'User')}</span></div>`;await update(ref(rtdb,`userChats/${currentUser.uid}/${uid}`),{unread:0});if(stopMessagesListener)stopMessagesListener();stopMessagesListener=onValue(ref(rtdb,`conversations/${conversationId(currentUser.uid,uid)}/messages`),snap=>renderMessages(snap.val()||{}));renderChatList();setTimeout(()=>document.getElementById("messageInput")?.focus(),60);};
-function renderMessages(raw){const list=document.getElementById("messagesList");if(!list)return;const rows=Object.values(raw).sort((a,b)=>Number(a.createdAt||0)-Number(b.createdAt||0));if(!rows.length){list.innerHTML='<div class="chat-search-empty" style="margin:auto">No messages yet. Say hello 👋</div>';return;}list.innerHTML=rows.map(m=>{const mine=m.senderUid===currentUser?.uid,t=Number(m.createdAt||0);return `<div class="message-bubble-wrap ${mine?'mine':'theirs'}"><div class="message-bubble ${mine?'mine':'theirs'}"><p>${escapeHTML(m.text||'')}</p><span class="message-time">${t?new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Sending…'}</span></div></div>`;}).join('');list.scrollTop=list.scrollHeight;}
-window.sendChatMessage=async function(e){e?.preventDefault();if(!currentUser||!activeChatUid)return;const inp=document.getElementById("messageInput"),text=String(inp?.value||'').trim();if(!text)return;try{const target=await getDirectoryUser(activeChatUid);if(!target)return;const cid=await ensureConversation({uid:activeChatUid,...target});const sent=Date.now();await set(push(ref(rtdb,`conversations/${cid}/messages`)),{senderUid:currentUser.uid,senderName:currentUser.displayName||'Google User',text:text.slice(0,1000),createdAt:serverTimestamp()});const old=normalizeChatMeta(chatUsers[activeChatUid],activeChatUid),p=profileData||{};await update(ref(rtdb),{[`userChats/${currentUser.uid}/${activeChatUid}`]:{otherUid:activeChatUid,conversationId:cid,username:target.username||'user',displayName:target.displayName||'User',photoURL:target.photoURL||'',lastMessage:text,lastMessageAt:sent,pinned:old.pinned,unread:0,updatedAt:serverTimestamp()},[`userChats/${activeChatUid}/${currentUser.uid}`]:{otherUid:currentUser.uid,conversationId:cid,username:p.username||makeDefaultUsername(currentUser),displayName:currentUser.displayName||'Google User',photoURL:currentUser.photoURL||'',lastMessage:text,lastMessageAt:sent,pinned:false,unread:Number(normalizeChatMeta(chatUsers[activeChatUid],activeChatUid).unread||0)+1,updatedAt:serverTimestamp()}});if(inp)inp.value='';}catch(err){console.error(err);alert('Message could not be sent. Check Firebase rules.');}};
-window.togglePinnedChat=async function(e,uid){e?.stopPropagation();const m=normalizeChatMeta(chatUsers[uid],uid);try{await update(ref(rtdb,`userChats/${currentUser.uid}/${uid}`),{pinned:!m.pinned});}catch(err){console.error(err);}};
+
+window.lockChatFromMenu=function(e,uid){e?.preventDefault();e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");openPinModal("set",uid);};
+window.changeChatPin=function(e,uid){e?.preventDefault();e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");openPinModal("unlockForChange",uid);};
+window.unlockChatFromMenu=async function(e,uid){e?.preventDefault();e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");
+  const meta=normalizeChatMeta(chatUsers[uid],uid); if(!meta.locked)return;
+  openPinModal("unlock",uid);
+};
+
+async function deleteChatList(e,uid){
+  e?.preventDefault();e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");
+  if(!currentUser||!uid)return;
+  if(!confirm("Delete this chat from your chat list? The other user will keep their copy."))return;
+  try{await remove(ref(rtdb,`userChats/${currentUser.uid}/${uid}`));if(activeChatUid===uid)showChatListMobile();showChatToast("🗑 Chat removed from your list.","success");}catch(err){console.error(err);showChatToast("Could not delete this chat.","error");}
+}
+window.deleteChatList=deleteChatList;
+
+function attachChatLongPress(el,uid){
+  let timer=null, moved=false;
+  const clear=()=>{if(timer){clearTimeout(timer);timer=null;}};
+  el.addEventListener("touchstart",ev=>{moved=false;clear();timer=setTimeout(()=>{moved=true;showChatActions(uid,{clientX:ev.touches[0]?.clientX||window.innerWidth/2,clientY:ev.touches[0]?.clientY||window.innerHeight/2,preventDefault(){},stopPropagation(){}});},560);},{passive:true});
+  el.addEventListener("touchmove",()=>{moved=true;clear();},{passive:true});
+  el.addEventListener("touchend",()=>clear(),{passive:true});
+  el.addEventListener("contextmenu",ev=>{ev.preventDefault();showChatActions(uid,ev);});
+}
+
+function renderChatList(){
+  const el=document.getElementById("chatList");if(!el)return;
+  const rows=Object.values(chatUsers).map(normalizeChatMeta).sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||(b.lastMessageAt-a.lastMessageAt));
+  el.innerHTML=rows.length?rows.map(c=>`<div class="chat-user-row ${activeChatUid===c.otherUid?'active':''} ${c.locked?'chat-locked':''}" data-chat-uid="${escapeAttribute(c.otherUid)}" onclick="openConversation('${escapeAttribute(c.otherUid)}')"><img class="chat-user-avatar" src="${escapeAttribute(c.photoURL)}" alt=""><span class="chat-user-copy"><strong>@${escapeHTML(c.username)} ${c.locked?'🔒':''}</strong><small>${escapeHTML(c.lastMessage||'Start a conversation')}${c.unread>0?` • ${c.unread} unread`:''}</small></span><span class="chat-row-actions"><span class="chat-unread-dot ${c.unread>0?'show':''}"></span><button class="pin-chat-btn ${c.pinned?'pinned':''}" type="button" onclick="showChatActions('${escapeAttribute(c.otherUid)}',event)">⋯</button></span></div>`).join(""): '<div class="chat-empty-list">No conversations yet.<br>Search a username above to start one.</div>';
+  el.querySelectorAll(".chat-user-row[data-chat-uid]").forEach(row=>attachChatLongPress(row,row.dataset.chatUid));
+  const unread=rows.reduce((n,c)=>n+Math.max(0,c.unread),0), badge=document.getElementById("chatBadge");if(badge){badge.textContent=unread>99?'99+':unread;badge.classList.toggle('hidden',!unread);}
+}
+
+function subscribeToChatList(user){
+  if(stopChatListListener)stopChatListListener();
+  chatUsers={};chatListPrevious={};
+  stopChatListListener=onValue(ref(rtdb,`userChats/${user.uid}`),snap=>{
+    const raw=snap.val()||{};
+    const next=Object.fromEntries(Object.entries(raw).map(([k,v])=>[k,normalizeChatMeta(v,k)]));
+    Object.values(next).forEach(meta=>{
+      const prev=chatListPrevious[meta.otherUid];
+      if(prev && meta.unread>Number(prev.unread||0) && meta.otherUid!==activeChatUid){notifyIncomingMessage(meta,meta.lastMessage,meta.displayName);}
+    });
+    chatUsers=next;chatListPrevious=JSON.parse(JSON.stringify(next));renderChatList();
+  });
+}
+async function getDirectoryUser(uid){const s=await get(ref(rtdb,`userDirectory/${uid}`));return s.exists()?s.val():null;}
+async function ensureConversation(target){const cid=conversationId(currentUser.uid,target.uid),rr=ref(rtdb,`conversations/${cid}`),s=await get(rr);if(!s.exists())await update(rr,{members:{[currentUser.uid]:true,[target.uid]:true},createdAt:serverTimestamp()});return cid;}
+window.openChat=async function(){if(!currentUser)return openMandatoryAuth();await requestChatNotifications();document.getElementById("settingsCard")?.classList.add("hidden");document.getElementById("privacyCard")?.classList.add("hidden");document.getElementById("chatCard")?.classList.remove("hidden");showChatListMobile();document.getElementById("chatUserSearch")?.focus();};
+window.closeChat=function(){document.getElementById("chatCard")?.classList.add("hidden");document.getElementById("chatCard")?.classList.remove("chat-conversation-open");activeChatUid=null;activeMessages={};if(stopMessagesListener){stopMessagesListener();stopMessagesListener=null;}};
+window.showChatListMobile=function(){document.getElementById("chatCard")?.classList.remove("chat-conversation-open");document.getElementById("conversationView")?.classList.add("hidden");document.getElementById("conversationEmpty")?.classList.remove("hidden");activeChatUid=null;activeMessages={};if(stopMessagesListener){stopMessagesListener();stopMessagesListener=null;}renderChatList();};
+
+function renderSearchProfile(target){
+  const out=document.getElementById("searchProfileContent");
+  if(!out||!target)return;
+  const allow=target.allowMessages!==false;
+  out.innerHTML=`
+    <div class="search-profile-hero">
+      <img src="${escapeAttribute(target.photoURL||'logo.png')}" alt="${escapeAttribute(target.username||'User')}" class="search-profile-avatar">
+      <div class="search-profile-name"><strong>@${escapeHTML(target.username||'user')}</strong><span>${escapeHTML(target.displayName||'WHITEQUIZ user')}</span></div>
+      <div class="profile-status-pill ${target.active&&target.showActiveStatus?'active':''}">${target.active&&target.showActiveStatus?'● Active now':'○ Offline'}</div>
+    </div>
+    <div class="search-profile-bio">${escapeHTML(target.bio||'No bio added yet.')}</div>
+    <div class="search-profile-grid">
+      <div><small>GMAIL</small><strong>${escapeHTML(target.emailMasked||'Hidden')}</strong></div>
+      <div><small>DECKS</small><strong>${escapeHTML(profileDeckCountText(target))}</strong></div>
+      <div><small>STATUS</small><strong>${escapeHTML(profileActiveText(target))}</strong></div>
+    </div>
+    ${allow?'<button id="previewMessageBtn" class="btn-primary btn-full" type="button">💬 Message</button>':'<div class="privacy-blocked-message">🔒 This user is not accepting new message requests right now.</div>'}
+  `;
+  document.getElementById("previewMessageBtn")?.addEventListener("click",()=>messageSearchedUser(target.uid));
+}
+
+window.previewSearchedUser=async function(uid){
+  if(!currentUser||uid===currentUser.uid)return;
+  try{
+    const target=await getDirectoryUser(uid);
+    if(!target)return;
+    renderSearchProfile(target);
+    const modal=document.getElementById("searchProfilePreview");
+    modal?.classList.remove("hidden"); modal?.setAttribute("aria-hidden","false");
+  }catch(e){console.error(e);showChatToast("Could not load this profile.","error");}
+};
+window.closeSearchProfilePreview=function(){const modal=document.getElementById("searchProfilePreview");modal?.classList.add("hidden");modal?.setAttribute("aria-hidden","true");};
+window.messageSearchedUser=async function(uid){
+  if(!currentUser||uid===currentUser.uid)return;
+  try{
+    const target=await getDirectoryUser(uid);
+    if(!target)return;
+    if(target.allowMessages===false){closeSearchProfilePreview();return showChatToast("This user is not accepting new message requests.","error");}
+    const cid=await ensureConversation({uid,...target});
+    const mine=normalizeChatMeta(chatUsers[uid],uid),p=profileData||{};
+    await update(ref(rtdb),{
+      [`userChats/${currentUser.uid}/${uid}`]:{otherUid:uid,conversationId:cid,username:target.username||'user',displayName:target.displayName||'User',photoURL:target.photoURL||'',lastMessage:mine.lastMessage,lastMessageAt:mine.lastMessageAt,pinned:mine.pinned,locked:mine.locked,pinHash:mine.pinHash,unread:0,updatedAt:serverTimestamp()},
+      [`userChats/${uid}/${currentUser.uid}`]:{otherUid:currentUser.uid,conversationId:cid,username:p.username||makeDefaultUsername(currentUser),displayName:currentUser.displayName||'Google User',photoURL:currentUser.photoURL||'',lastMessage:mine.lastMessage,lastMessageAt:mine.lastMessageAt,pinned:false,unread:0,updatedAt:serverTimestamp()}
+    });
+    closeSearchProfilePreview();
+    document.getElementById("chatSearchResults").innerHTML="";
+    document.getElementById("chatUserSearch").value="";
+    await openConversation(uid);
+  }catch(e){console.error(e);showChatToast("Could not start this conversation. Check Firebase rules.","error");}
+};
+window.searchChatUsers=async function(){
+  if(!currentUser)return;
+  const term=slugifyUsername(document.getElementById("chatUserSearch")?.value||""),out=document.getElementById("chatSearchResults");
+  if(!out)return;
+  if(term.length<2){out.innerHTML="";return;}
+  out.innerHTML='<div class="chat-search-empty">Searching…</div>';
+  try{
+    const snap=await get(query(ref(rtdb,"searchDirectory"),orderByChild("usernameLower"),startAt(term),endAt(term+"\uf8ff")));
+    const a=[];snap.forEach(x=>{const u=x.val()||{};if(x.key!==currentUser.uid&&u.searchable!==false)a.push(u);});
+    out.innerHTML=a.slice(0,12).map(u=>`<button class="chat-user-row chat-search-result" type="button" data-search-uid="${escapeAttribute(u.uid)}"><img class="chat-user-avatar" src="${escapeAttribute(u.photoURL||'logo.png')}" alt=""><span class="chat-user-copy"><strong>@${escapeHTML(u.username||'user')}</strong><small>${escapeHTML(u.displayName||'WHITEQUIZ user')} • ${escapeHTML(profileActiveText(u))}</small></span><span class="search-result-arrow">›</span></button>`).join("")||'<div class="chat-search-empty">No matching username found.</div>';
+    out.querySelectorAll('[data-search-uid]').forEach(btn=>btn.addEventListener('click',()=>previewSearchedUser(btn.dataset.searchUid)));
+  }catch(e){console.error(e);out.innerHTML='<div class="chat-search-empty">Search unavailable. Check your database rules.</div>';}
+};
+
+async function markIncomingMessagesRead(uid,cid,raw){
+  if(!currentUser||!uid)return;
+  const writes={};let lastReadAt=0;
+  Object.entries(raw||{}).forEach(([mid,m])=>{
+    if(m && m.senderUid===uid && !m.readAt){writes[`conversations/${cid}/messages/${mid}/readAt`]=serverTimestamp();lastReadAt=Math.max(lastReadAt,Date.now());}
+  });
+  if(!Object.keys(writes).length)return;
+  writes[`userChats/${currentUser.uid}/${uid}/unread`]=0;
+  writes[`userChats/${uid}/${currentUser.uid}/lastMessageReadAt`]=serverTimestamp();
+  try{await update(ref(rtdb),writes);}catch(e){console.warn("Read receipt update failed",e);}
+}
+
+window.openConversation=async function(uid,skipLock=false){
+  if(!currentUser)return openMandatoryAuth();
+  const meta=normalizeChatMeta(chatUsers[uid],uid);
+  if(meta.locked&&!skipLock){openPinModal("unlock",uid);return;}
+  const target=await getDirectoryUser(uid);if(!target)return;
+  activeChatUid=uid;
+  document.getElementById("chatSearchResults")?.replaceChildren();
+  document.getElementById("chatUserSearch") && (document.getElementById("chatUserSearch").value="");
+  document.getElementById("chatCard")?.classList.add("chat-conversation-open");
+  document.getElementById("conversationEmpty")?.classList.add("hidden");document.getElementById("conversationView")?.classList.remove("hidden");
+  const u=document.getElementById("conversationUser");if(u)u.innerHTML=`<img src="${escapeAttribute(target.photoURL||'logo.png')}" alt=""><div><strong>@${escapeHTML(target.username||'user')}</strong><span>${escapeHTML(target.displayName||'User')} • ${escapeHTML(profileActiveText(target))} ${meta.locked?'• 🔒 Private':''}</span></div>`;
+  await update(ref(rtdb,`userChats/${currentUser.uid}/${uid}`),{unread:0});
+  if(stopMessagesListener)stopMessagesListener();
+  const cid=meta.conversationId||conversationId(currentUser.uid,uid);
+  stopMessagesListener=onValue(ref(rtdb,`conversations/${cid}/messages`),async snap=>{
+    activeMessages=snap.val()||{};renderMessages(activeMessages);await markIncomingMessagesRead(uid,cid,activeMessages);
+  },err=>console.error("Message listener failed",err));
+  renderChatList();setTimeout(()=>document.getElementById("messageInput")?.focus(),60);
+};
+
+function messageStatus(m){
+  if(!m||m.senderUid!==currentUser?.uid)return "";
+  if(m.readAt)return "✓✓ Read";
+  if(m.createdAt)return "✓ Sent";
+  return "Sending…";
+}
+function renderMessages(raw){
+  const list=document.getElementById("messagesList");if(!list)return;
+  const rows=Object.entries(raw||{}).sort((a,b)=>Number(a[1]?.createdAt||0)-Number(b[1]?.createdAt||0));
+  if(!rows.length){list.innerHTML='<div class="chat-search-empty" style="margin:auto">No messages yet. Say hello 👋</div>';return;}
+  list.innerHTML=rows.map(([mid,m])=>{
+    const mine=m.senderUid===currentUser?.uid,t=Number(m.createdAt||0),deleted=!!m.deleted,edited=!!m.editedAt;
+    const status=messageStatus(m);
+    const body=deleted?'<em class="message-deleted">This message was unsent.</em>':`<p>${escapeHTML(m.text||'')}</p>`;
+    return `<div class="message-bubble-wrap ${mine?'mine':'theirs'}" data-message-id="${escapeAttribute(mid)}"><div class="message-bubble ${mine?'mine':'theirs'} ${deleted?'deleted':''}" ontouchstart="startMessageLongPress(event,'${escapeAttribute(mid)}')" ontouchend="cancelMessageLongPress()" oncontextmenu="showMessageActions('${escapeAttribute(mid)}',event)"><div class="message-content">${body}</div><div class="message-meta"><span class="message-time">${t?new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Sending…'}${edited&&!deleted?' • edited':''}</span>${mine?`<span class="message-status">${status}</span>`:''}</div><button class="message-more-btn" type="button" onclick="showMessageActions('${escapeAttribute(mid)}',event)">⋯</button></div></div>`;
+  }).join('');
+  list.scrollTop=list.scrollHeight;
+}
+let messagePressTimer=null;
+window.startMessageLongPress=function(e,mid){clearTimeout(messagePressTimer);messagePressTimer=setTimeout(()=>showMessageActions(mid,{clientX:e.touches?.[0]?.clientX||window.innerWidth/2,clientY:e.touches?.[0]?.clientY||window.innerHeight/2,preventDefault(){},stopPropagation(){}}),560);};
+window.cancelMessageLongPress=function(){clearTimeout(messagePressTimer);messagePressTimer=null;};
+window.showMessageActions=function(mid,e){
+  e?.preventDefault();e?.stopPropagation();clearTimeout(messagePressTimer);messagePressTimer=null;
+  const m=activeMessages?.[mid];if(!m||!currentUser)return;
+  const menu=document.getElementById("chatContextMenu");if(!menu)return;
+  let html=`<button type="button" onclick="copyMessage(event,'${escapeAttribute(mid)}')">📋 Copy</button>`;
+  if(m.senderUid===currentUser.uid&&!m.deleted){html+=`<button type="button" onclick="editChatMessage(event,'${escapeAttribute(mid)}')">✏️ Edit message</button><button type="button" class="danger" onclick="unsendChatMessage(event,'${escapeAttribute(mid)}')">↩ Unsend message</button>`;}
+  menu.innerHTML=html;chatMenuPosition(e?.clientX||window.innerWidth-240,e?.clientY||120);
+};
+window.copyMessage=async function(e,mid){e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");const m=activeMessages?.[mid];if(!m||m.deleted)return;try{await navigator.clipboard.writeText(m.text||"");showChatToast("📋 Message copied.","success");}catch(_){showChatToast("Could not copy the message.","error");}};
+window.editChatMessage=async function(e,mid){e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");const m=activeMessages?.[mid];if(!m||m.senderUid!==currentUser?.uid||m.deleted)return;const next=prompt("Edit your message:",m.text||"");if(next===null)return;const text=next.trim().slice(0,1000);if(!text)return alert("Message cannot be empty.");try{await update(ref(rtdb,`conversations/${conversationId(currentUser.uid,activeChatUid)}/messages/${mid}`),{text,editedAt:serverTimestamp()});await syncChatPreviewAfterMessageChange();}catch(err){console.error(err);showChatToast("Could not edit the message. Check Firebase rules.","error");}};
+window.unsendChatMessage=async function(e,mid){e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");const m=activeMessages?.[mid];if(!m||m.senderUid!==currentUser?.uid||m.deleted)return;if(!confirm("Unsend this message for everyone?"))return;try{await update(ref(rtdb,`conversations/${conversationId(currentUser.uid,activeChatUid)}/messages/${mid}`),{deleted:true,deletedAt:serverTimestamp(),text:""});await syncChatPreviewAfterMessageChange();showChatToast("↩ Message unsent.","success");}catch(err){console.error(err);showChatToast("Could not unsend the message. Check Firebase rules.","error");}};
+
+async function syncChatPreviewAfterMessageChange(){
+  if(!currentUser||!activeChatUid)return;
+  const cid=conversationId(currentUser.uid,activeChatUid),snap=await get(ref(rtdb,`conversations/${cid}/messages`)),raw=snap.val()||{};
+  const entries=Object.entries(raw).sort((a,b)=>Number(b[1]?.createdAt||0)-Number(a[1]?.createdAt||0));
+  const latest=entries.find(([,m])=>m&&!m.deleted);
+  const meta=normalizeChatMeta(chatUsers[activeChatUid],activeChatUid),target=await getDirectoryUser(activeChatUid),p=profileData||{};
+  const last=latest?.[1]?.text||"Message unsent";
+  const at=Number(latest?.[1]?.createdAt||Date.now());
+  await update(ref(rtdb),{[`userChats/${currentUser.uid}/${activeChatUid}`]:{otherUid:activeChatUid,conversationId:cid,username:target?.username||meta.username,displayName:target?.displayName||meta.displayName,photoURL:target?.photoURL||meta.photoURL,lastMessage:last,lastMessageAt:at,pinned:meta.pinned,locked:meta.locked,pinHash:meta.pinHash,unread:0,updatedAt:serverTimestamp()},[`userChats/${activeChatUid}/${currentUser.uid}/lastMessage`]:last,[`userChats/${activeChatUid}/${currentUser.uid}/lastMessageAt`]:at});
+}
+
+window.sendChatMessage=async function(e){
+  e?.preventDefault();if(!currentUser||!activeChatUid)return;
+  const inp=document.getElementById("messageInput"),text=String(inp?.value||'').trim();if(!text)return;
+  try{
+    const target=await getDirectoryUser(activeChatUid);if(!target)return;
+    const cid=conversationId(currentUser.uid,activeChatUid);await ensureConversation({uid:activeChatUid,...target});
+    const msgRef=push(ref(rtdb,`conversations/${cid}/messages`));
+    await set(msgRef,{senderUid:currentUser.uid,senderName:profileData?.username||currentUser.displayName||'Google User',text:text.slice(0,1000),createdAt:serverTimestamp(),readAt:null,deleted:false});
+    const old=normalizeChatMeta(chatUsers[activeChatUid],activeChatUid),p=profileData||{},sent=Date.now();
+    await update(ref(rtdb),{
+      [`userChats/${currentUser.uid}/${activeChatUid}`]:{otherUid:activeChatUid,conversationId:cid,username:target.username||'user',displayName:target.displayName||'User',photoURL:target.photoURL||'',lastMessage:text,lastMessageAt:sent,pinned:old.pinned,locked:old.locked,pinHash:old.pinHash,unread:0,updatedAt:serverTimestamp()},
+      [`userChats/${activeChatUid}/${currentUser.uid}`]:{otherUid:currentUser.uid,conversationId:cid,username:p.username||makeDefaultUsername(currentUser),displayName:currentUser.displayName||'Google User',photoURL:currentUser.photoURL||'',lastMessage:text,lastMessageAt:sent,pinned:normalizeChatMeta(chatUsers[activeChatUid],activeChatUid).pinned||false,unread:Number(normalizeChatMeta(chatUsers[activeChatUid],activeChatUid).unread||0)+1,updatedAt:serverTimestamp()}
+    });
+    await requestChatNotifications();
+    if(inp)inp.value='';
+  }catch(err){console.error(err);showChatToast('Message could not be sent. Check Firebase rules.','error');}
+};
+window.togglePinnedChat=async function(e,uid){e?.preventDefault();e?.stopPropagation();const m=normalizeChatMeta(chatUsers[uid],uid);try{await update(ref(rtdb,`userChats/${currentUser.uid}/${uid}`),{pinned:!m.pinned});document.getElementById("chatContextMenu")?.classList.add("hidden");showChatToast(m.pinned?"📍 Chat unpinned.":"📌 Chat pinned.","success");}catch(err){console.error(err);showChatToast("Could not change pin state.","error");}};
 
 // -----------------------------
 // PWA INSTALL
