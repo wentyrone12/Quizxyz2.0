@@ -10,6 +10,8 @@
     --secondary: rgba(255, 255, 255, 0.08);
     --radius: 20px;
     --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+    --v2-text:red;
 }
 
 body.light-mode {
@@ -22,7 +24,9 @@ body.light-mode {
     --primary: #111113;
     --primary-text: #fff;
     --secondary: rgba(0, 0, 0, 0.06);
-    --shadow: 0 20px 60px rgba(0, 0, 0, 0.08)
+    --shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+
+    --v2-text:Gray;
 }
 
 * {
@@ -260,15 +264,15 @@ body.light-mode .navbar {
 }
 
 .gradient-text {
-    background: linear-gradient(90deg, #fff, #a1a1aa);
+    background: linear-gradient(90deg, #f90303, #ff000071);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent
+    -webkit-text-fill-color: transparent;
 }
 
 body.light-mode .gradient-text {
-    background: linear-gradient(90deg, #111, #666);
+    background: linear-gradient(90deg, #e2ff03, #b7ff005d);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent
+    -webkit-text-fill-color: transparent;
 }
 
 .hero-sub {

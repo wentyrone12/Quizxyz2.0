@@ -1274,6 +1274,7 @@ function normalizeChatMeta(v={},fallback=""){
 let activeMessages = {};
 let pinModalMode = null;
 let pinModalUid = null;
+let pinModalReturnFocus = null;
 let chatToastTimer = null;
 let chatListPrevious = {};
 let lastNotificationAt = {};
@@ -1315,18 +1316,56 @@ async function sha256(value){
 }
 
 function getPinDigits(){return Array.from(document.querySelectorAll("#pinModal .pin-digit"));}
-function clearPinInputs(){getPinDigits().forEach(i=>i.value="");getPinDigits()[0]?.focus();document.getElementById("pinModalError")?.classList.add("hidden");}
+function clearPinInputs(focusFirst=true){
+  const digits=getPinDigits();
+  digits.forEach(i=>i.value="");
+  document.getElementById("pinModalError")?.classList.add("hidden");
+  if(focusFirst) digits[0]?.focus();
+}
 function pinValue(){return getPinDigits().map(i=>i.value).join("");}
+function visibleElement(el){
+  if(!(el instanceof HTMLElement) || !el.isConnected) return false;
+  if(el.closest('.hidden,[aria-hidden="true"]')) return false;
+  const r=el.getBoundingClientRect();
+  return r.width>0 && r.height>0;
+}
+function getPinFallbackFocus(){
+  const messageInput=document.getElementById("messageInput");
+  if(visibleElement(messageInput)) return messageInput;
+  const search=document.getElementById("chatUserSearch");
+  if(visibleElement(search)) return search;
+  const chat=document.getElementById("chatCard");
+  if(visibleElement(chat)) return chat.querySelector(".close-btn") || chat;
+  return document.body;
+}
 function openPinModal(mode,uid){
   pinModalMode=mode; pinModalUid=uid;
   const modal=document.getElementById("pinModal"), title=document.getElementById("pinModalTitle"), text=document.getElementById("pinModalText"), btn=document.getElementById("pinModalSubmit");
   if(!modal)return;
+  const active=document.activeElement;
+  pinModalReturnFocus=active instanceof HTMLElement && !modal.contains(active) ? active : null;
   title.textContent=mode==="set"?"Set Chat PIN":mode==="change"?"Change Chat PIN":mode==="unlockForChange"?"Verify Current PIN":mode==="unlock"?"Unlock Chat":"Chat PIN";
   text.textContent=mode==="set"?"Create a 6-digit PIN for this private conversation.":mode==="change"?"Create a new 6-digit PIN for this conversation.":mode==="unlockForChange"?"Enter your current PIN before changing it.":"Enter your 6-digit PIN to open this private conversation.";
   if(btn)btn.textContent=mode==="unlock"||mode==="unlockForChange"?"Unlock":mode==="change"?"Save New PIN":"Save PIN";
-  modal.classList.remove("hidden"); modal.setAttribute("aria-hidden","false"); clearPinInputs();
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden","false");
+  modal.setAttribute("aria-modal","true");
+  clearPinInputs(true);
 }
-window.closePinModal=function(){const modal=document.getElementById("pinModal");modal?.classList.add("hidden");modal?.setAttribute("aria-hidden","true");pinModalMode=null;pinModalUid=null;clearPinInputs();};
+window.closePinModal=function(){
+  const modal=document.getElementById("pinModal");
+  const active=document.activeElement;
+  if(modal?.contains(active)) active.blur();
+  const restore=visibleElement(pinModalReturnFocus)?pinModalReturnFocus:getPinFallbackFocus();
+  if(restore && restore!==document.body) { try{ restore.focus({preventScroll:true}); }catch{ restore.focus(); } }
+  modal?.classList.add("hidden");
+  modal?.setAttribute("aria-hidden","true");
+  modal?.setAttribute("aria-modal","false");
+  pinModalMode=null;
+  pinModalUid=null;
+  pinModalReturnFocus=null;
+  clearPinInputs(false);
+};
 
 async function submitPinModal(){
   if(!currentUser||!pinModalUid)return;
@@ -1360,6 +1399,22 @@ document.addEventListener("DOMContentLoaded",()=>{
     input.addEventListener("paste",e=>{e.preventDefault();const v=(e.clipboardData?.getData("text")||"").replace(/\D/g,"").slice(0,6);v.split("").forEach((d,i)=>{if(all[i])all[i].value=d;});all[Math.min(v.length,5)]?.focus();});
   });
   document.getElementById("pinModalSubmit")?.addEventListener("click",submitPinModal);
+
+  const questionInput=document.getElementById("question");
+  const answerInput=document.getElementById("answer");
+  questionInput?.addEventListener("keydown",e=>{
+    if(e.key!=="Enter" || e.isComposing)return;
+    e.preventDefault();
+    answerInput?.focus();
+  });
+  answerInput?.addEventListener("keydown",e=>{
+    if(e.key!=="Enter" || e.isComposing)return;
+    e.preventDefault();
+    if(answerInput.value.trim()) {
+      Promise.resolve(window.addQuestion()).then(()=>questionInput?.focus()).catch(err=>console.error("Auto-save flashcard failed",err));
+    }
+  });
+
   document.addEventListener("click",()=>document.getElementById("chatContextMenu")?.classList.add("hidden"));
 });
 
@@ -1425,9 +1480,42 @@ function subscribeToChatList(user){
 }
 async function getDirectoryUser(uid){const s=await get(ref(rtdb,`userDirectory/${uid}`));return s.exists()?s.val():null;}
 async function ensureConversation(target){const cid=conversationId(currentUser.uid,target.uid),rr=ref(rtdb,`conversations/${cid}`),s=await get(rr);if(!s.exists())await update(rr,{members:{[currentUser.uid]:true,[target.uid]:true},createdAt:serverTimestamp()});return cid;}
-window.openChat=async function(){if(!currentUser)return openMandatoryAuth();await requestChatNotifications();document.getElementById("settingsCard")?.classList.add("hidden");document.getElementById("privacyCard")?.classList.add("hidden");document.getElementById("chatCard")?.classList.remove("hidden");showChatListMobile();document.getElementById("chatUserSearch")?.focus();};
-window.closeChat=function(){document.getElementById("chatCard")?.classList.add("hidden");document.getElementById("chatCard")?.classList.remove("chat-conversation-open");activeChatUid=null;activeMessages={};if(stopMessagesListener){stopMessagesListener();stopMessagesListener=null;}};
-window.showChatListMobile=function(){document.getElementById("chatCard")?.classList.remove("chat-conversation-open");document.getElementById("conversationView")?.classList.add("hidden");document.getElementById("conversationEmpty")?.classList.remove("hidden");activeChatUid=null;activeMessages={};if(stopMessagesListener){stopMessagesListener();stopMessagesListener=null;}renderChatList();};
+window.openChat=async function(){
+  if(!currentUser)return openMandatoryAuth();
+  await requestChatNotifications();
+  document.getElementById("settingsCard")?.classList.add("hidden");
+  document.getElementById("privacyCard")?.classList.add("hidden");
+  const chatCard=document.getElementById("chatCard");
+  chatCard?.classList.remove("hidden");
+  chatCard?.setAttribute("aria-hidden","false");
+  chatCard?.setAttribute("aria-modal","true");
+  showChatListMobile();
+  document.getElementById("chatUserSearch")?.focus();
+};
+window.closeChat=function(){
+  const chatCard=document.getElementById("chatCard");
+  const drawer=chatCard?.querySelector(".chat-drawer-card");
+  chatCard?.classList.add("hidden");
+  chatCard?.setAttribute("aria-hidden","true");
+  chatCard?.removeAttribute("aria-modal");
+  chatCard?.classList.remove("chat-conversation-open");
+  drawer?.classList.remove("chat-conversation-open");
+  activeChatUid=null;
+  activeMessages={};
+  if(stopMessagesListener){stopMessagesListener();stopMessagesListener=null;}
+};
+window.showChatListMobile=function(){
+  const chatCard=document.getElementById("chatCard");
+  const drawer=chatCard?.querySelector(".chat-drawer-card");
+  chatCard?.classList.remove("chat-conversation-open");
+  drawer?.classList.remove("chat-conversation-open");
+  document.getElementById("conversationView")?.classList.add("hidden");
+  document.getElementById("conversationEmpty")?.classList.remove("hidden");
+  activeChatUid=null;
+  activeMessages={};
+  if(stopMessagesListener){stopMessagesListener();stopMessagesListener=null;}
+  renderChatList();
+};
 
 function renderSearchProfile(target){
   const out=document.getElementById("searchProfileContent");
@@ -1513,8 +1601,13 @@ window.openConversation=async function(uid,skipLock=false){
   activeChatUid=uid;
   document.getElementById("chatSearchResults")?.replaceChildren();
   document.getElementById("chatUserSearch") && (document.getElementById("chatUserSearch").value="");
-  document.getElementById("chatCard")?.classList.add("chat-conversation-open");
-  document.getElementById("conversationEmpty")?.classList.add("hidden");document.getElementById("conversationView")?.classList.remove("hidden");
+  const chatCard=document.getElementById("chatCard");
+  const drawer=chatCard?.querySelector(".chat-drawer-card");
+  chatCard?.classList.add("chat-conversation-open");
+  drawer?.classList.add("chat-conversation-open");
+  chatCard?.setAttribute("aria-hidden","false");
+  document.getElementById("conversationEmpty")?.classList.add("hidden");
+  document.getElementById("conversationView")?.classList.remove("hidden");
   const u=document.getElementById("conversationUser");if(u)u.innerHTML=`<img src="${escapeAttribute(target.photoURL||'logo.png')}" alt=""><div><strong>@${escapeHTML(target.username||'user')}</strong><span>${escapeHTML(target.displayName||'User')} • ${escapeHTML(profileActiveText(target))} ${meta.locked?'• 🔒 Private':''}</span></div>`;
   await update(ref(rtdb,`userChats/${currentUser.uid}/${uid}`),{unread:0});
   if(stopMessagesListener)stopMessagesListener();

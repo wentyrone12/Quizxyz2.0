@@ -1,0 +1,9 @@
+WHITE_QUIZXYZ mobile/chat repair
+
+- Fixed mobile conversation view: opening a chat now toggles chat-conversation-open on the actual .chat-drawer-card used by the mobile CSS.
+- Fixed PIN accessibility/focus bug: PIN modal no longer hides while a PIN button remains focused; closing clears inputs without refocusing a hidden field and restores focus to a visible chat control.
+- PIN unlock now returns to the conversation on mobile as well as desktop.
+- Added accessible modal state updates for Chat and PIN modal.
+- Question input: Enter moves focus to Answer.
+- Answer input: Enter automatically saves the flashcard and returns focus to Question.
+- Added a mobile-specific visibility safeguard for the conversation panel.
