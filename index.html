@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WHITE_QUIZXYZ 2.3</title>
+  <title>WHITE_QUIZXYZ 2.0</title>
   <link rel="icon" href="logo.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#070709">
@@ -180,15 +180,37 @@
             </div>
             <div id="messagesList" class="messages-list"></div>
             <form class="message-composer" onsubmit="sendChatMessage(event)"><input id="messageInput" type="text"
-                maxlength="1000" autocomplete="off" placeholder="Type a message…"><button class="send-message-btn"
-                type="submit">➤</button></form>
+                maxlength="1000" autocomplete="off" placeholder="Type a message…"><button class="send-deck-btn"
+                type="button" aria-label="Send a deck" title="Send a deck"
+                onclick="openSendDeckModal()">📚</button><button class="send-message-btn" type="submit"
+                aria-label="Send message">➤</button></form>
           </div>
         </div>
       </div>
     </aside>
   </div>
 
+  <div id="deckContextMenu" class="chat-context-menu deck-context-menu hidden" role="menu"></div>
   <div id="chatContextMenu" class="chat-context-menu hidden" role="menu"></div>
+
+  <div id="sendDeckModal" class="overlay hidden" aria-hidden="true">
+    <div class="settings-backdrop" onclick="closeSendDeckModal()"></div>
+    <div class="overlay-card glass send-deck-modal-card" role="dialog" aria-modal="true" aria-label="Send a deck">
+      <div class="overlay-header">
+        <div><span class="mini-label">SHARE WITH THIS CHAT</span>
+          <h3>Send a Deck</h3>
+        </div>
+        <button class="close-btn" type="button" onclick="closeSendDeckModal()">✕</button>
+      </div>
+      <div class="overlay-body send-deck-body">
+        <p class="send-deck-hint">Choose one of your saved decks to send to this conversation.</p>
+        <div id="sendDeckList" class="send-deck-list"></div>
+        <button id="confirmSendDeckBtn" class="btn-primary btn-full" type="button" onclick="sendSelectedDeck()"
+          disabled>📚 Send Selected Deck</button>
+      </div>
+    </div>
+  </div>
+
   <div id="pinModal" class="overlay hidden" aria-hidden="true">
     <div class="overlay-card glass pin-modal-card">
       <div class="overlay-header">
@@ -227,7 +249,7 @@
       </div>
       <div class="overlay-body">
         <img src="logo.png" class="about-logo" alt="logo">
-        <h2>WHITE_QUIZXYZ 2.0</h2>
+        <h2 style="text-align: center;">WHITE_QUIZXYZ 2.0</h2>
         <p class="about-text"><strong>WHITE</strong> = Wendell Highly Intelligent Thinking Excellence — discipline,
           growth, continuous learning. Smart flashcard system for memory & focus.</p>
         <button class="btn-primary" onclick="document.getElementById('aboutadminCard').classList.add('hidden')">⬅
@@ -284,7 +306,7 @@
   <main class="container">
     <section class="hero">
       <div class="hero-badge">✦ v2.0 • Smart Learning • Cloud Sync</div>
-      <h1>Stop waiting for the perfect time.<br><span class="gradient-text">or you will die waiting.</span></h1>
+      <h1>Stop waiting for the perfect time.<br><span class="gradient-text">or you will die while waiting.</span></h1>
       <p class="hero-sub">Create flashcards, separate subjects into decks, sync them to Google, and share study sets
         with friends.</p>
     </section>
@@ -330,8 +352,13 @@
             <span class="section-icon">🔗</span>
           </div>
           <div class="shared-input-row">
-            <input type="text" id="sharedLinkInput" placeholder="Paste share link here…" autocomplete="off">
-            <button id="loadSharedBtn" class="btn-secondary" onclick="loadSharedQuiz()">Load Shared Deck</button>
+            <div class="shared-link-input-wrap">
+              <input type="text" id="sharedLinkInput" placeholder="Paste share link here…" autocomplete="off">
+              <button id="clearSharedBtn" class="shared-clear-btn hidden" type="button" aria-label="Clear shared link"
+                title="Clear" onclick="clearSharedLink()">✕</button>
+            </div>
+            <button id="loadSharedBtn" class="btn-secondary" type="button" onclick="loadSharedQuiz()">Load Shared
+              Deck</button>
           </div>
           <div id="sharedPreview" class="shared-preview hidden"></div>
         </div>
@@ -341,7 +368,8 @@
         <div class="card glass deck-manager-card">
           <div class="section-head">
             <div>
-              <span class="mini-label">YOUR DECKS</span>
+              <span class="mini-label">YOUR SUBJECTS</span>
+              <h3>Decks</h3>
             </div>
             <span class="section-icon">🗂️</span>
           </div>

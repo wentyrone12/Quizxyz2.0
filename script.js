@@ -534,7 +534,7 @@ function renderDecksUI() {
           <span class="deck-mini-icon">📚</span>
           <span class="deck-mini-copy"><strong>${escapeHTML(deck.name)}</strong><small>${deck.cards.length} card${deck.cards.length === 1 ? "" : "s"}</small></span>
         </button>
-        <button class="deck-mini-delete" type="button" title="Delete deck" onclick="deleteDeck('${escapeAttribute(id)}', event)">✕</button>
+        <button class="deck-mini-more" type="button" title="Deck actions" aria-label="Deck actions" onclick="showDeckActions('${escapeAttribute(id)}', event)">⋯</button>
       `;
       list.appendChild(row);
     });
@@ -556,6 +556,47 @@ window.selectDeck = async function (id) {
 
 window.handleDeckSelect = function (event) {
   window.selectDeck(event.target.value);
+};
+
+window.showDeckActions = function (id, event) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  if (!currentUser || !decks[id]) return;
+  const menu = document.getElementById("deckContextMenu");
+  if (!menu) return;
+  menu.innerHTML = `
+    <button type="button" onclick="renameDeck(event,'${escapeAttribute(id)}')">✏️ Rename</button>
+    <button type="button" class="danger" onclick="deleteDeck(event,'${escapeAttribute(id)}')">🗑 Delete deck</button>
+  `;
+  menu.dataset.deckId = id;
+  menu.style.left = "0px";
+  menu.style.top = "0px";
+  menu.classList.remove("hidden");
+  const rect = menu.getBoundingClientRect();
+  const x = event?.clientX ?? window.innerWidth - 230;
+  const y = event?.clientY ?? 120;
+  menu.style.left = `${Math.max(12, Math.min(x, window.innerWidth - rect.width - 12))}px`;
+  menu.style.top = `${Math.max(12, Math.min(y, window.innerHeight - rect.height - 12))}px`;
+};
+
+window.renameDeck = async function (event, id) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  document.getElementById("deckContextMenu")?.classList.add("hidden");
+  if (!currentUser || !decks[id]) return;
+  const current = decks[id].name || "Deck";
+  const next = prompt("Rename deck:", current);
+  if (next === null) return;
+  const name = next.trim().slice(0, 80);
+  if (!name) return alert("Deck name cannot be empty.");
+  if (name === current) return;
+  decks[id].name = name;
+  decks[id].updatedAt = Date.now();
+  if (activeDeckId === id) localStorage.setItem("activeDeckName", name);
+  localCache();
+  renderDecksUI();
+  await saveDeckToCloud(id);
+  showSyncStatus(`Renamed deck to “${name}”`, false, 1800);
 };
 
 window.createDeck = async function () {
@@ -582,7 +623,8 @@ window.createDeck = async function () {
   showReviewer();
 };
 
-window.deleteDeck = async function (id, event) {
+window.deleteDeck = async function (event, id) {
+  event?.preventDefault();
   event?.stopPropagation();
   if (!currentUser || !decks[id]) return;
   const count = decks[id].cards.length;
@@ -720,6 +762,7 @@ window.saveQuizOnline = async function () {
     await navigator.clipboard?.writeText(link).catch(() => {});
     const input = document.getElementById("sharedLinkInput");
     if (input) input.value = link;
+    updateSharedClearButton();
     alert("✅ Share link created and copied!\n\nAnyone with the link can preview the cards and see the Google account name that shared them.");
   } catch (e) {
     console.error(e);
@@ -737,6 +780,23 @@ function parseSharedInput(value) {
     return raw;
   }
 }
+
+window.updateSharedClearButton = function () {
+  const input = document.getElementById("sharedLinkInput");
+  const clear = document.getElementById("clearSharedBtn");
+  if (!clear) return;
+  clear.classList.toggle("hidden", !String(input?.value || "").trim());
+};
+
+window.clearSharedLink = function () {
+  const input = document.getElementById("sharedLinkInput");
+  const preview = document.getElementById("sharedPreview");
+  if (input) input.value = "";
+  if (preview) { preview.innerHTML = ""; preview.classList.add("hidden"); }
+  sharedQuizCache = null;
+  updateSharedClearButton();
+  input?.focus();
+};
 
 window.loadSharedQuiz = async function (inputOverride = "") {
   const input = document.getElementById("sharedLinkInput");
@@ -765,6 +825,7 @@ window.loadSharedQuiz = async function (inputOverride = "") {
     };
     renderSharedPreview(sharedQuizCache);
     if (input) input.value = raw;
+    updateSharedClearButton();
   } catch (error) {
     console.error(error);
     alert("❌ Shared deck not found or the link is invalid.");
@@ -828,6 +889,7 @@ window.importSharedDeck = async function () {
   await saveDeckToCloud(deckId);
   showReviewer();
   showSyncStatus("Shared deck imported and synced", false, 2200);
+  clearSharedLink();
 };
 
 async function loadSharedFromQuery() {
@@ -1415,7 +1477,22 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
   });
 
-  document.addEventListener("click",()=>document.getElementById("chatContextMenu")?.classList.add("hidden"));
+  const sharedInput=document.getElementById("sharedLinkInput");
+  sharedInput?.addEventListener("input",()=>{
+    updateSharedClearButton();
+  });
+  sharedInput?.addEventListener("keydown",e=>{
+    if(e.key==="Enter" && !e.isComposing){
+      e.preventDefault();
+      window.loadSharedQuiz();
+    }
+  });
+  updateSharedClearButton();
+
+  document.addEventListener("click",()=>{
+    document.getElementById("chatContextMenu")?.classList.add("hidden");
+    document.getElementById("deckContextMenu")?.classList.add("hidden");
+  });
 });
 
 function chatMenuPosition(x,y){
@@ -1631,7 +1708,15 @@ function renderMessages(raw){
   list.innerHTML=rows.map(([mid,m])=>{
     const mine=m.senderUid===currentUser?.uid,t=Number(m.createdAt||0),deleted=!!m.deleted,edited=!!m.editedAt;
     const status=messageStatus(m);
-    const body=deleted?'<em class="message-deleted">This message was unsent.</em>':`<p>${escapeHTML(m.text||'')}</p>`;
+    let body;
+    if(deleted){
+      body='<em class="message-deleted">This message was unsent.</em>';
+    }else if(m.type==="deck" && Array.isArray(m.deckCards)){
+      const senderLabel = m.senderUsername || m.senderName || "WHITEQUIZ user";
+      body=`<div class="chat-deck-card"><div class="chat-deck-icon">📚</div><div class="chat-deck-copy"><strong>${escapeHTML(m.deckName||"Shared Deck")}</strong><small>${m.deckCards.length} card${m.deckCards.length===1?"":"s"} • from @${escapeHTML(senderLabel)}</small></div>${mine?'<span class="chat-deck-sent">Sent</span>':`<button class="chat-deck-import-btn" type="button" onclick="importChatDeck(event,'${escapeAttribute(mid)}')">Import</button>`}</div>`;
+    }else{
+      body=`<p>${escapeHTML(m.text||'')}</p>`;
+    }
     return `<div class="message-bubble-wrap ${mine?'mine':'theirs'}" data-message-id="${escapeAttribute(mid)}"><div class="message-bubble ${mine?'mine':'theirs'} ${deleted?'deleted':''}" ontouchstart="startMessageLongPress(event,'${escapeAttribute(mid)}')" ontouchend="cancelMessageLongPress()" oncontextmenu="showMessageActions('${escapeAttribute(mid)}',event)"><div class="message-content">${body}</div><div class="message-meta"><span class="message-time">${t?new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Sending…'}${edited&&!deleted?' • edited':''}</span>${mine?`<span class="message-status">${status}</span>`:''}</div><button class="message-more-btn" type="button" onclick="showMessageActions('${escapeAttribute(mid)}',event)">⋯</button></div></div>`;
   }).join('');
   list.scrollTop=list.scrollHeight;
@@ -1643,8 +1728,11 @@ window.showMessageActions=function(mid,e){
   e?.preventDefault();e?.stopPropagation();clearTimeout(messagePressTimer);messagePressTimer=null;
   const m=activeMessages?.[mid];if(!m||!currentUser)return;
   const menu=document.getElementById("chatContextMenu");if(!menu)return;
-  let html=`<button type="button" onclick="copyMessage(event,'${escapeAttribute(mid)}')">📋 Copy</button>`;
-  if(m.senderUid===currentUser.uid&&!m.deleted){html+=`<button type="button" onclick="editChatMessage(event,'${escapeAttribute(mid)}')">✏️ Edit message</button><button type="button" class="danger" onclick="unsendChatMessage(event,'${escapeAttribute(mid)}')">↩ Unsend message</button>`;}
+  let html=m.type==="deck" ? (Array.isArray(m.deckCards) && m.senderUid!==currentUser.uid && !m.deleted ? `<button type="button" onclick="importChatDeck(event,'${escapeAttribute(mid)}')">📚 Import deck</button>` : ``) : `<button type="button" onclick="copyMessage(event,'${escapeAttribute(mid)}')">📋 Copy</button>`;
+  if(m.senderUid===currentUser.uid&&!m.deleted){
+    html+=m.type==="deck" ? `` : `<button type="button" onclick="editChatMessage(event,'${escapeAttribute(mid)}')">✏️ Edit message</button>`;
+    html+=`<button type="button" class="danger" onclick="unsendChatMessage(event,'${escapeAttribute(mid)}')">↩ Unsend message</button>`;
+  }
   menu.innerHTML=html;chatMenuPosition(e?.clientX||window.innerWidth-240,e?.clientY||120);
 };
 window.copyMessage=async function(e,mid){e?.stopPropagation();document.getElementById("chatContextMenu")?.classList.add("hidden");const m=activeMessages?.[mid];if(!m||m.deleted)return;try{await navigator.clipboard.writeText(m.text||"");showChatToast("📋 Message copied.","success");}catch(_){showChatToast("Could not copy the message.","error");}};
@@ -1661,6 +1749,92 @@ async function syncChatPreviewAfterMessageChange(){
   const at=Number(latest?.[1]?.createdAt||Date.now());
   await update(ref(rtdb),{[`userChats/${currentUser.uid}/${activeChatUid}`]:{otherUid:activeChatUid,conversationId:cid,username:target?.username||meta.username,displayName:target?.displayName||meta.displayName,photoURL:target?.photoURL||meta.photoURL,lastMessage:last,lastMessageAt:at,pinned:meta.pinned,locked:meta.locked,pinHash:meta.pinHash,unread:0,updatedAt:serverTimestamp()},[`userChats/${activeChatUid}/${currentUser.uid}/lastMessage`]:last,[`userChats/${activeChatUid}/${currentUser.uid}/lastMessageAt`]:at});
 }
+
+let selectedSendDeckId=null;
+
+window.openSendDeckModal=function(){
+  if(!currentUser||!activeChatUid)return showChatToast("Open a conversation first.","error");
+  selectedSendDeckId=null;
+  const modal=document.getElementById("sendDeckModal");
+  if(!modal)return;
+  renderSendDeckList();
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden","false");
+  modal.setAttribute("aria-modal","true");
+};
+
+window.closeSendDeckModal=function(){
+  const modal=document.getElementById("sendDeckModal");
+  if(modal && modal.contains(document.activeElement)) document.getElementById("messageInput")?.focus();
+  modal?.classList.add("hidden");
+  modal?.setAttribute("aria-hidden","true");
+  modal?.removeAttribute("aria-modal");
+  selectedSendDeckId=null;
+};
+
+function renderSendDeckList(){
+  const out=document.getElementById("sendDeckList"),btn=document.getElementById("confirmSendDeckBtn");
+  if(!out)return;
+  const entries=Object.entries(decks||{});
+  if(!entries.length){
+    out.innerHTML='<div class="send-deck-empty">No saved decks yet. Create a deck first.</div>';
+    if(btn)btn.disabled=true;
+    return;
+  }
+  out.innerHTML=entries.map(([id,d])=>`<button type="button" class="send-deck-option ${id===selectedSendDeckId?'selected':''}" data-send-deck-id="${escapeAttribute(id)}"><span class="send-deck-option-icon">📚</span><span class="send-deck-option-copy"><strong>${escapeHTML(d.name||"Deck")}</strong><small>${d.cards.length} card${d.cards.length===1?"":"s"}</small></span><span class="send-deck-check">${id===selectedSendDeckId?'✓':''}</span></button>`).join('');
+  out.querySelectorAll('[data-send-deck-id]').forEach(el=>el.addEventListener('click',()=>{
+    selectedSendDeckId=el.dataset.sendDeckId||null;
+    renderSendDeckList();
+  }));
+  if(btn){btn.disabled=!selectedSendDeckId||!decks[selectedSendDeckId]||decks[selectedSendDeckId].cards.length===0;}
+}
+
+window.sendSelectedDeck=async function(){
+  if(!currentUser||!activeChatUid||!selectedSendDeckId||!decks[selectedSendDeckId])return;
+  const deck=decks[selectedSendDeckId];
+  if(!Array.isArray(deck.cards)||!deck.cards.length)return showChatToast("That deck has no cards to send.","error");
+  const modal=document.getElementById("sendDeckModal"),btn=document.getElementById("confirmSendDeckBtn");
+  if(btn){btn.disabled=true;btn.textContent="Sending…";}
+  try{
+    const target=await getDirectoryUser(activeChatUid);if(!target)throw new Error("Recipient not found");
+    const cid=conversationId(currentUser.uid,activeChatUid);await ensureConversation({uid:activeChatUid,...target});
+    const msgRef=push(ref(rtdb,`conversations/${cid}/messages`));
+    const cards=deck.cards.map(c=>({question:String(c.question||""),answer:String(c.answer||"")}));
+    const text=`📚 Shared deck: ${deck.name}`;
+    await set(msgRef,{senderUid:currentUser.uid,senderName:currentUser.displayName||"Google User",senderUsername:profileData?.username||makeDefaultUsername(currentUser),text,createdAt:serverTimestamp(),readAt:null,deleted:false,type:"deck",deckId:selectedSendDeckId,deckName:String(deck.name||"Deck").slice(0,80),deckCards:cards});
+    const old=normalizeChatMeta(chatUsers[activeChatUid],activeChatUid),p=profileData||{},sent=Date.now();
+    await update(ref(rtdb),{
+      [`userChats/${currentUser.uid}/${activeChatUid}`]:{otherUid:activeChatUid,conversationId:cid,username:target.username||"user",displayName:target.displayName||"User",photoURL:target.photoURL||"",lastMessage:text,lastMessageAt:sent,pinned:old.pinned,locked:old.locked,pinHash:old.pinHash,unread:0,updatedAt:serverTimestamp()},
+      [`userChats/${activeChatUid}/${currentUser.uid}`]:{otherUid:currentUser.uid,conversationId:cid,username:p.username||makeDefaultUsername(currentUser),displayName:currentUser.displayName||"Google User",photoURL:currentUser.photoURL||"",lastMessage:text,lastMessageAt:sent,pinned:normalizeChatMeta(chatUsers[activeChatUid],activeChatUid).pinned||false,unread:Number(normalizeChatMeta(chatUsers[activeChatUid],activeChatUid).unread||0)+1,updatedAt:serverTimestamp()}
+    });
+    closeSendDeckModal();
+    await requestChatNotifications();
+    showChatToast(`📚 “${deck.name}” sent.`,"success");
+  }catch(err){
+    console.error(err);
+    showChatToast("Deck could not be sent. Check Firebase rules.","error");
+    if(btn){btn.disabled=false;btn.textContent="📚 Send Selected Deck";}
+  }
+};
+
+window.importChatDeck=async function(e,mid){
+  e?.preventDefault();e?.stopPropagation();
+  const m=activeMessages?.[mid];
+  if(!currentUser||!m||m.deleted||m.type!=="deck"||!Array.isArray(m.deckCards)||!m.deckCards.length)return;
+  const source=m.deckName||"Shared Deck";
+  let name=source;
+  const tag=` (from ${m.senderUsername||m.senderName||"user"})`;
+  if(name.length+tag.length<=80)name+=tag;
+  else name=name.slice(0,Math.max(1,80-tag.length))+tag;
+  const deckId=createDeckId();
+  decks[deckId]={name,cards:m.deckCards.map(c=>({question:String(c.question||""),answer:String(c.answer||"")})),createdAt:Date.now(),updatedAt:Date.now()};
+  activeDeckId=deckId;
+  setActiveDeckLocal(deckId);
+  setQuizFromActiveDeck();
+  renderDecksUI();
+  await saveDeckToCloud(deckId);
+  showChatToast(`📚 “${source}” imported to My Decks.`,"success");
+};
 
 window.sendChatMessage=async function(e){
   e?.preventDefault();if(!currentUser||!activeChatUid)return;

@@ -7,3 +7,16 @@ WHITE_QUIZXYZ mobile/chat repair
 - Question input: Enter moves focus to Answer.
 - Answer input: Enter automatically saves the flashcard and returns focus to Question.
 - Added a mobile-specific visibility safeguard for the conversation panel.
+
+
+WHITE_QUIZXYZ 2.4 — deck management + chat deck sharing
+- My Decks rows now use a compact 3-dot actions menu with Rename and Delete deck.
+- Added mobile-safe deck rename flow with cloud sync.
+- Added X clear control inside the shared-link input; clearing removes the preview and cached shared deck.
+- Added Enter-to-load support for shared links.
+- Successful shared-deck imports clear the shared-link field and preview automatically.
+- Added Send a Deck button beside the chat send button.
+- Added responsive Send a Deck picker showing saved decks and card counts.
+- Deck messages are stored in the existing RTDB conversation message system, with Sent/Read status support.
+- Recipients can import a received deck directly into My Decks.
+- Deck message actions support Import for received decks and Unsend for the sender.
